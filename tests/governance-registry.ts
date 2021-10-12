@@ -1,17 +1,19 @@
 import * as anchor from '@project-serum/anchor';
+import { Program } from '@project-serum/anchor';
 import { PublicKey, Keypair, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { GovernanceRegistry } from '../target/types/governance_registry';
 
 describe('voting-rights', () => {
-
-  // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
-  const program = anchor.workspace.GovernanceRegistry;
-	const realm = Keypair.generate().publicKey;
+  const program = anchor.workspace.GovernanceRegistry as Program<GovernanceRegistry>;
 
+	// Initialized variables shared across tests.
+	const realm = Keypair.generate().publicKey;
 	const votingMintDecimals = 6;
 
+	// Uninitialized variables shared across tests.
 	let registrar: PublicKey, votingMint: PublicKey, voter: PublicKey;
 	let registrarBump: number, votingMintBump: number, voterBump: number;
 
@@ -39,7 +41,7 @@ describe('voting-rights', () => {
 	});
 
   it('Initializes a registrar', async () => {
-		await program.rpc.initRegistrar(votingMintDecimals, registrarBump, votingMintBump, {
+		await program.rpc.initRegistrar(registrarBump, votingMintBump, votingMintDecimals, {
 			accounts: {
 				registrar,
 				votingMint,
