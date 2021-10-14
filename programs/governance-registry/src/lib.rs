@@ -2,7 +2,11 @@ use anchor_lang::__private::bytemuck::Zeroable;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use spl_governance::addins::voter_weight::{
+    VoterWeightAccountType, VoterWeightRecord as SplVoterWeightRecord,
+};
 use std::mem::size_of;
+use std::ops::Deref;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -56,9 +60,9 @@ pub mod governance_registry {
 
     /// Deposits tokens into the registrar in exchange for *frozen* voting
     /// tokens. These tokens are not used for anything other than displaying
-    /// the amount in walletes.
+    /// the amount in wallets.
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
-        let registrar = &mut ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
 
         // Get the exchange rate entry associated with this deposit.
@@ -118,6 +122,24 @@ pub mod governance_registry {
         // todo
         Ok(())
     }
+
+    /// Calculates the lockup-scaled, time-decayed voting power for the given
+    /// voter and writes it into a `VoteWeightRecord` account to be used by
+    /// the SPL governance program.
+    ///
+    /// When a voter locks up tokens with a vesting schedule, the voter's
+    /// voting power is scaled with a linear multiplier, but as time goes on,
+    /// that multiplier is decreased since the remaining lockup decreases.
+    pub fn decay_voting_power(ctx: Context<DecayVotingPower>) -> Result<()> {
+        // todo
+        Ok(())
+    }
+
+    /// Closes the voter account, allowing one to retrieve rent exemption SOL.
+    pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
+        require!(ctx.accounts.voting_token.amount > 0, VotingTokenNonZero);
+        Ok(())
+    }
 }
 
 // Contexts.
@@ -130,7 +152,7 @@ pub struct InitRegistrar<'info> {
         seeds = [realm.key().as_ref()],
         bump = registrar_bump,
         payer = payer,
-				space = 8 + size_of::<Registrar>()
+        space = 8 + size_of::<Registrar>()
     )]
     registrar: AccountLoader<'info, Registrar>,
     #[account(
@@ -140,10 +162,13 @@ pub struct InitRegistrar<'info> {
         payer = payer,
         mint::authority = registrar,
         mint::decimals = voting_mint_decimals,
+        mint::freeze_authority = freeze_authority,
     )]
     voting_mint: Account<'info, Mint>,
     realm: UncheckedAccount<'info>,
     authority: UncheckedAccount<'info>,
+    #[account(seeds = [b"freeze"], bump)]
+    freeze_authority: UncheckedAccount<'info>,
     payer: Signer<'info>,
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
@@ -158,9 +183,10 @@ pub struct InitVoter<'info> {
         seeds = [registrar.key().as_ref(), authority.key().as_ref()],
         bump = voter_bump,
         payer = authority,
-				space = 8 + size_of::<Voter>()
+        space = 8 + size_of::<Voter>()
     )]
     voter: AccountLoader<'info, Voter>,
+    // todo: init voting toiken
     registrar: AccountLoader<'info, Registrar>,
     authority: Signer<'info>,
     system_program: Program<'info, System>,
@@ -221,6 +247,20 @@ pub struct UpdateSchedule {
     // todo
 }
 
+#[derive(Accounts)]
+pub struct DecayVotingPower<'info> {
+    vote_weight_record: Account<'info, VoterWeightRecord>,
+}
+
+#[derive(Accounts)]
+pub struct CloseVoter<'info> {
+    #[account(mut, has_one = authority, close = sol_destination)]
+    voter: AccountLoader<'info, Voter>,
+    authority: Signer<'info>,
+    voting_token: Account<'info, TokenAccount>,
+    sol_destination: UncheckedAccount<'info>,
+}
+
 // Accounts.
 
 /// Instance of a voting rights distributor.
@@ -256,6 +296,7 @@ pub struct ExchangeRateEntry {
 
 unsafe impl Zeroable for ExchangeRateEntry {}
 
+/// Bookkeeping for a single deposit for a given mint and lockup schedule.
 #[zero_copy]
 pub struct DepositEntry {
     // True if the deposit entry is being used.
@@ -280,6 +321,57 @@ impl DepositEntry {
     }
 }
 
+/// Anchor wrapper for the SPL governance program's VoterWeightRecord type.
+#[derive(Clone)]
+pub struct VoterWeightRecord(SplVoterWeightRecord);
+
+impl anchor_lang::AccountDeserialize for VoterWeightRecord {
+    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+        let mut data = buf;
+        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
+            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
+        if vwr.account_type != VoterWeightAccountType::VoterWeightRecord {
+            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+        }
+        Ok(VoterWeightRecord(vwr))
+    }
+
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+        let mut data = buf;
+        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
+            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
+        if vwr.account_type != VoterWeightAccountType::Uninitialized {
+            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+        }
+        Ok(VoterWeightRecord(vwr))
+    }
+}
+
+impl anchor_lang::AccountSerialize for VoterWeightRecord {
+    fn try_serialize<W: std::io::Write>(
+        &self,
+        writer: &mut W,
+    ) -> std::result::Result<(), ProgramError> {
+        AnchorSerialize::serialize(&self.0, writer)
+            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
+        Ok(())
+    }
+}
+
+impl anchor_lang::Owner for VoterWeightRecord {
+    fn owner() -> Pubkey {
+        ID
+    }
+}
+
+impl Deref for VoterWeightRecord {
+    type Target = SplVoterWeightRecord;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 // Error.
 
 #[error]
@@ -293,6 +385,7 @@ pub enum ErrorCode {
     #[msg("")]
     DepositEntryNotFound,
     DepositEntryFull,
+    VotingTokenNonZero,
 }
 
 // CpiContext.
