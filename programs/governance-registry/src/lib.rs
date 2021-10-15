@@ -23,7 +23,7 @@ pub mod governance_registry {
         _voting_mint_decimals: u8,
     ) -> Result<()> {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
-        registrar.registrar_bump = registrar_bump;
+        registrar.bump = registrar_bump;
         registrar.voting_mint_bump = voting_mint_bump;
         registrar.realm = ctx.accounts.realm.key();
         registrar.voting_mint = ctx.accounts.voting_mint.key();
@@ -35,7 +35,7 @@ pub mod governance_registry {
     /// Creates a new voter account. There can only be a single voter per
     /// user wallet.
     pub fn init_voter(ctx: Context<InitVoter>, voter_bump: u8) -> Result<()> {
-        let voter = &mut ctx.accounts.voter.load_mut()?;
+        let voter = &mut ctx.accounts.voter.load_init()?;
         voter.voter_bump = voter_bump;
         voter.authority = ctx.accounts.authority.key();
         voter.registrar = ctx.accounts.registrar.key();
@@ -48,6 +48,10 @@ pub mod governance_registry {
     /// exchange rate per mint.
     pub fn add_exchange_rate(ctx: Context<AddExchangeRate>, er: ExchangeRateEntry) -> Result<()> {
         require!(er.rate > 0, InvalidRate);
+
+        let mut er = er;
+        er.is_used = false;
+
         let registrar = &mut ctx.accounts.registrar.load_mut()?;
         let idx = registrar
             .rates
@@ -95,16 +99,31 @@ pub mod governance_registry {
                 Some(e) => &mut voter.deposits[e],
             }
         };
+
+        // Update the amount deposited.
         deposit_entry.amount += amount;
 
-        // Calculate the amount of voting tokens to mint.
+        // Calculate the amount of voting tokens to mint at the specified
+        // exchange rate.
         let scaled_amount = er_entry.rate * amount;
 
         // Deposit tokens into the registrar.
-        token::transfer((&*ctx.accounts).into(), amount)?;
+        token::transfer(ctx.accounts.transfer_ctx(), amount)?;
 
         // Mint vote tokens to the depositor.
-        token::mint_to((&*ctx.accounts).into(), scaled_amount)?;
+        token::mint_to(
+            ctx.accounts
+                .mint_to_ctx()
+                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+            scaled_amount,
+        )?;
+
+        // Freeze the vote tokens; they are just used for UIs + accounting.
+        token::freeze_account(
+            ctx.accounts
+                .freeze_ctx()
+                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+        )?;
 
         Ok(())
     }
@@ -162,13 +181,11 @@ pub struct InitRegistrar<'info> {
         payer = payer,
         mint::authority = registrar,
         mint::decimals = voting_mint_decimals,
-        mint::freeze_authority = freeze_authority,
+        mint::freeze_authority = registrar,
     )]
     voting_mint: Account<'info, Mint>,
     realm: UncheckedAccount<'info>,
     authority: UncheckedAccount<'info>,
-    #[account(seeds = [b"freeze"], bump)]
-    freeze_authority: UncheckedAccount<'info>,
     payer: Signer<'info>,
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
@@ -183,13 +200,23 @@ pub struct InitVoter<'info> {
         seeds = [registrar.key().as_ref(), authority.key().as_ref()],
         bump = voter_bump,
         payer = authority,
-        space = 8 + size_of::<Voter>()
+        space = 8 + size_of::<Voter>(),
     )]
     voter: AccountLoader<'info, Voter>,
-    // todo: init voting toiken
+    #[account(
+				init,
+				payer = authority,
+				associated_token::authority = authority,
+				associated_token::mint = voting_mint,
+		)]
+    voting_token: Account<'info, TokenAccount>,
+    voting_mint: Account<'info, Mint>,
     registrar: AccountLoader<'info, Registrar>,
     authority: Signer<'info>,
+    token_program: Program<'info, Token>,
+    associated_token_program: Program<'info, AssociatedToken>,
     system_program: Program<'info, System>,
+    rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -203,7 +230,7 @@ pub struct AddExchangeRate<'info> {
     )]
     exchange_vault: Account<'info, TokenAccount>,
     deposit_mint: Account<'info, Mint>,
-    #[account(has_one = authority)]
+    #[account(mut, has_one = authority)]
     registrar: AccountLoader<'info, Registrar>,
     authority: Signer<'info>,
     payer: Signer<'info>,
@@ -215,26 +242,62 @@ pub struct AddExchangeRate<'info> {
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    #[account(has_one = authority)]
+    #[account(mut, has_one = authority)]
     voter: AccountLoader<'info, Voter>,
     #[account(
+				mut,
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
     exchange_vault: Account<'info, TokenAccount>,
     #[account(
+				mut,
         constraint = deposit_token.mint == deposit_mint.key(),
     )]
     deposit_token: Account<'info, TokenAccount>,
     #[account(
+				mut,
         constraint = registrar.load()?.voting_mint == voting_token.mint,
     )]
     voting_token: Account<'info, TokenAccount>,
     authority: Signer<'info>,
     registrar: AccountLoader<'info, Registrar>,
     deposit_mint: Account<'info, Mint>,
+    #[account(mut)]
     voting_mint: Account<'info, Mint>,
     token_program: Program<'info, Token>,
+}
+
+impl<'info> Deposit<'info> {
+    fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::Transfer {
+            from: self.deposit_token.to_account_info(),
+            to: self.exchange_vault.to_account_info(),
+            authority: self.authority.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
+
+    fn mint_to_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::MintTo<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::MintTo {
+            mint: self.voting_mint.to_account_info(),
+            to: self.voting_token.to_account_info(),
+            authority: self.registrar.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
+
+    fn freeze_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::FreezeAccount<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::FreezeAccount {
+            account: self.voting_token.to_account_info(),
+            mint: self.voting_mint.to_account_info(),
+            authority: self.registrar.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
 }
 
 #[derive(Accounts)]
@@ -270,7 +333,7 @@ pub struct Registrar {
     pub realm: Pubkey,
     pub voting_mint: Pubkey,
     pub voting_mint_bump: u8,
-    pub registrar_bump: u8,
+    pub bump: u8,
     pub rates: [ExchangeRateEntry; 32],
 }
 
@@ -386,30 +449,4 @@ pub enum ErrorCode {
     DepositEntryNotFound,
     DepositEntryFull,
     VotingTokenNonZero,
-}
-
-// CpiContext.
-
-impl<'info> From<&Deposit<'info>> for CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
-    fn from(accs: &Deposit<'info>) -> Self {
-        let program = accs.token_program.to_account_info();
-        let accounts = token::Transfer {
-            from: accs.deposit_token.to_account_info(),
-            to: accs.exchange_vault.to_account_info(),
-            authority: accs.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-}
-
-impl<'info> From<&Deposit<'info>> for CpiContext<'_, '_, '_, 'info, token::MintTo<'info>> {
-    fn from(accs: &Deposit<'info>) -> Self {
-        let program = accs.token_program.to_account_info();
-        let accounts = token::MintTo {
-            mint: accs.voting_mint.to_account_info(),
-            to: accs.voting_token.to_account_info(),
-            authority: accs.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
 }
