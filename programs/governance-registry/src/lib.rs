@@ -2,11 +2,10 @@ use anchor_lang::__private::bytemuck::Zeroable;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-use spl_governance::addins::voter_weight::{
-    VoterWeightAccountType, VoterWeightRecord as SplVoterWeightRecord,
-};
 use std::mem::size_of;
-use std::ops::Deref;
+use voter_weight_record::VoterWeightRecord;
+
+mod voter_weight_record;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -34,20 +33,6 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 /// voting power for the given slot. If this is not done, then the transaction
 /// will fail (since the SPL governance program will require the measurement
 /// to be active for the current slot).
-///
-/// # Locked Tokens
-///
-/// Locked tokens scale voting power linearly. For example, if you were to
-/// lockup your tokens for 10 years, with a single vesting period, then your
-/// voting power would scale by 10x. If you were to lockup your tokens for
-/// 10 years with two vesting periods, your voting power would scale by
-/// 1/2 * deposit * 5 + 1/2 * deposit * 10--since the first half of the lockup
-/// would unlock at year 5 and the other half would unlock at year 10.
-///
-/// # Decayed Voting Power
-///
-/// Although there is a premium awarded to voters for locking up their tokens,
-/// that premium decays over time, since the lockup period decreases over time.
 ///
 /// # Interacting with SPL Governance
 ///
@@ -140,9 +125,7 @@ pub mod governance_registry {
             d_entry.rate_idx = er_idx as u8;
 
             if let Some(l) = lockup {
-                d_entry.start_ts = l.start_ts;
-                d_entry.end_ts = l.end_ts;
-                d_entry.period_count = l.period_count;
+                d_entry.lockup = l;
             }
 
             free_entry_idx as u8
@@ -543,14 +526,104 @@ pub struct DepositEntry {
     pub amount: u64,
 
     // Locked state.
-    pub period_count: u32,
-    pub start_ts: i64,
-    pub end_ts: i64,
+    pub lockup: Lockup,
 }
 
 impl DepositEntry {
-    /// Returns the voting power given by this deposit, scaled to account for
-    /// a lockup.
+    /// # Voting Power Caclulation
+    ///
+    /// Returns the voting power for the deposit, giving locked tokens boosted
+    /// voting power that scales linearly with the lockup.
+    ///
+    /// The minimum lockup period is a single day. The max lockup period is
+    /// seven years. And so a one day lockup has 1/2 the voting power as a two
+    /// day lockup, which has 1/2555 the voting power of a 7 year lockup--
+    /// assuming the amount locked up is equal.
+    ///
+    /// To achieve this with the SPL governance program--which requires a "max
+    /// vote weight"--we attach what amounts to a scalar multiplier between 0
+    /// and 1 to normalize voting power. This multiplier is a function of
+    /// the lockup schedule. Here we will describe two, a one time
+    /// cliff and a linear vesting schedule unlocking daily.
+    ///
+    /// ## Cliff Lockup
+    ///
+    /// The cliff lockup allows one to lockup their tokens for a set period
+    /// of time, unlocking all at once on a given date.
+    ///
+    /// The calculation for this is straigtforward
+    ///
+    /// ```
+    /// voting_power = (number_days / 2555) * amount
+    /// ```
+    ///
+    /// ### Decay
+    ///
+    /// As time passes, the voting power should decay proportionally, in which
+    /// case one can substitute for `number_days` the number of days remaining
+    /// on the lockup.
+    ///
+    /// ## Daily Vesting Lockup
+    ///
+    /// Daily vesting can be calculated with simple series sum.
+    ///
+    /// For the sake of example, suppose we locked up 10 tokens for two days,
+    /// vesting linearly once a day. In other words, we have 5 tokens locked for
+    /// 1 day and 5 tokens locked for two days.
+    ///
+    /// Visually, we can see this in a two year timeline
+    ///
+    /// 0      5      10   amount unlocked
+    /// | ---- | ---- |
+    /// 0      1      2   days
+    ///
+    /// Then, to calculate the voting power at any time in the first day, we
+    /// have
+    ///
+    /// ```
+    /// voting_power = 1/2555 * 5 + 2/2555 * 5
+    /// ```
+    ///
+    /// Notice the scalar multipliers used to normalize the amounts.
+    /// Since 7 years is the maximum lock, and 1 day is the minimum, we have
+    /// a scalar of 1/2555 for a one day lock, 2/2555 for a two day lock,
+    /// 2555/2555 for a 7 year lock, and 0 for no lock.
+    ///
+    /// We can rewrite the equation above as
+    ///
+    /// ```
+    /// voting_power = 1/2555 * 5 + 2/2555 * 5
+    ///              = 1/2555 * 10/2 + 2/2555 * 10/2
+    /// ```
+    ///
+    /// Let's now generalize this to a daily vesting schedule over seven years.
+    /// Let "amount" be the total amount for vesting. Then the total voting
+    /// power to start is
+    ///
+    /// ```
+    /// voting_power = 1/2555*(amount/2555) + 2/2555*(amount/2555) + ... + (2555/2555)*(amount/2555)
+    ///              = 1/2555 * [1*(amount/2555) + 2*(amount/2555) + ... + 2555*(amount/255)]
+    ///              = (1/2555) * (amount/2555) * (1 + 2 + ... + 2555)
+    ///              = (1/2555) * (amount/2555) * [(2555 * [2555 + 1]) / 2]
+    ///              = (1 / m) * (amount / n) * [(n * [n + 1]) / 2],
+    /// ```
+    ///
+    /// where `m` is the max number of lockup days and `n` is the number of
+    /// days for the entire vesting schedule.
+    ///
+    /// ### Decay
+    ///
+    /// To calculate the decay, we can simply re-use the above sum to caculate
+    /// the amount vested from the start up until the current day, and subtract
+    /// that from the total.
+    ///
+    /// ## Voting Power Warmup
+    ///
+    /// To prevent the case where one borrows tokens to suddenly vote on a
+    /// favorable proposal, one can introduce a "warmup" period, where the
+    /// lockup calculation doesn't start until a specific date, so that
+    /// the voting power of all new depositors remains zero for an initial
+    /// period of time, say, two weeks.
     pub fn voting_power(&self) -> u64 {
         let locked_multiplier = 1; // todo
         self.amount * locked_multiplier
@@ -563,62 +636,20 @@ impl DepositEntry {
     }
 }
 
+#[zero_copy]
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct Lockup {
-    pub period_count: u32,
+    pub kind: LockupKind,
     pub start_ts: i64,
     pub end_ts: i64,
 }
 
-/// Anchor wrapper for the SPL governance program's VoterWeightRecord type.
-#[derive(Clone)]
-pub struct VoterWeightRecord(SplVoterWeightRecord);
-
-impl anchor_lang::AccountDeserialize for VoterWeightRecord {
-    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-        let mut data = buf;
-        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-        if vwr.account_type != VoterWeightAccountType::VoterWeightRecord {
-            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
-        }
-        Ok(VoterWeightRecord(vwr))
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-        let mut data = buf;
-        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-        if vwr.account_type != VoterWeightAccountType::Uninitialized {
-            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
-        }
-        Ok(VoterWeightRecord(vwr))
-    }
-}
-
-impl anchor_lang::AccountSerialize for VoterWeightRecord {
-    fn try_serialize<W: std::io::Write>(
-        &self,
-        writer: &mut W,
-    ) -> std::result::Result<(), ProgramError> {
-        AnchorSerialize::serialize(&self.0, writer)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
-        Ok(())
-    }
-}
-
-impl anchor_lang::Owner for VoterWeightRecord {
-    fn owner() -> Pubkey {
-        ID
-    }
-}
-
-impl Deref for VoterWeightRecord {
-    type Target = SplVoterWeightRecord;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+#[repr(u8)]
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
+pub enum LockupKind {
+    Daily = 1u8 << 0,
+    Yearly = 1u8 << 1,
+    Cliff = 1u8 << 2,
 }
 
 // Error.
