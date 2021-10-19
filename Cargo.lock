@@ -26,7 +26,7 @@ checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -39,7 +39,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -53,7 +53,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -64,7 +64,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -76,7 +76,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-interface"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -89,7 +89,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -101,7 +101,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-state"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -145,20 +145,21 @@ dependencies = [
 [[package]]
 name = "anchor-spl"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-lang",
  "lazy_static",
  "serum_dex",
  "solana-program",
  "spl-associated-token-account",
+ "spl-governance",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "anchor-syn"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#5925ed85289ddb43eb1266417f72b7f5433afac3"
+source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
@@ -341,9 +342,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cc"
-version = "1.0.70"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26a6ce4b6a484fa3edb70f7efa6fc430fd2b87285fe8b84304fd0936faa0dc0"
+checksum = "79c2681d6594606957bbb8631c4b90a7fcaaa72cdb714743a437b156d6a7eedd"
 
 [[package]]
 name = "cfg-if"
@@ -614,9 +615,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.102"
+version = "0.2.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2a5ac8f984bfcf3a823267e5fde638acc3325f6496633a5da6bb6eb2171e103"
+checksum = "7b2f96d100e1cf1929e7719b7edb3b90ab5298072638fccd77be9ce942ecdfce"
 
 [[package]]
 name = "libsecp256k1"
@@ -758,9 +759,9 @@ dependencies = [
 
 [[package]]
 name = "ppv-lite86"
-version = "0.2.10"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
+checksum = "c3ca011bd0129ff4ae15cd04c4eef202cadf6c51c21e47aba319b4e0501db741"
 
 [[package]]
 name = "proc-macro-crate"
@@ -783,9 +784,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.29"
+version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9f5105d4fdaab20335ca9565e106a5d9b82b6219b5ba735731124ac6711d23d"
+checksum = "edc3358ebc67bc8b7fa0c007f945b0b18226f78437d61bec735a9eb96b61ee70"
 dependencies = [
  "unicode-xid",
 ]
@@ -805,9 +806,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
+checksum = "38bc8cc6a5f2e3655e0899c1b848643b2562f853f114bfec7be120678e3ace05"
 dependencies = [
  "proc-macro2",
 ]
@@ -1130,8 +1131,26 @@ dependencies = [
 
 [[package]]
 name = "spl-governance"
-version = "2.1.1"
-source = "git+https://github.com/solana-labs/solana-program-library#e8b7009cc4d8cdd87232ccfc9ce93ab203ada496"
+version = "2.1.2"
+source = "git+https://github.com/solana-labs/solana-program-library#203db7bc3f19c49be485ab195d5d6b3a30483d70"
+dependencies = [
+ "arrayref",
+ "bincode",
+ "borsh",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "solana-program",
+ "spl-governance-tools",
+ "spl-token 3.2.0 (git+https://github.com/solana-labs/solana-program-library)",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-governance-tools"
+version = "0.1.0"
+source = "git+https://github.com/solana-labs/solana-program-library#203db7bc3f19c49be485ab195d5d6b3a30483d70"
 dependencies = [
  "arrayref",
  "bincode",
@@ -1162,7 +1181,7 @@ dependencies = [
 [[package]]
 name = "spl-token"
 version = "3.2.0"
-source = "git+https://github.com/solana-labs/solana-program-library#e8b7009cc4d8cdd87232ccfc9ce93ab203ada496"
+source = "git+https://github.com/solana-labs/solana-program-library#203db7bc3f19c49be485ab195d5d6b3a30483d70"
 dependencies = [
  "arrayref",
  "num-derive",
@@ -1186,9 +1205,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"
-version = "1.0.76"
+version = "1.0.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6f107db402c2c2055242dbf4d2af0e69197202e9faacbef9571bbe47f5a1b84"
+checksum = "d010a1623fbd906d51d650a9916aaefc05ffa0e4053ff7fe601167f3e715d194"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1206,18 +1225,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.29"
+version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "602eca064b2d83369e2b2f34b09c70b605402801927c65c11071ac911d299b88"
+checksum = "854babe52e4df1653706b98fcfc05843010039b406875930a70e4d9644e5c417"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.29"
+version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bad553cc2c78e8de258400763a647e80e6d1b31ee237275d756f6836d204494c"
+checksum = "aa32fd3f627f367fe16f893e2597ae3c05020f8bba2666a4e6ea73d377e5714b"
 dependencies = [
  "proc-macro2",
  "quote",
