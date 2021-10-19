@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use spl_governance::addins::voter_weight::{
     VoterWeightAccountType, VoterWeightRecord as SplVoterWeightRecord,
 };
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 /// Anchor wrapper for the SPL governance program's VoterWeightRecord type.
 #[derive(Clone)]
@@ -52,5 +52,11 @@ impl Deref for VoterWeightRecord {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for VoterWeightRecord {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

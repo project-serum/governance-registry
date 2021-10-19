@@ -55,6 +55,7 @@ pub mod governance_registry {
     /// per governance realm.
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
+        warmup_secs: i64,
         registrar_bump: u8,
         voting_mint_bump: u8,
         _voting_mint_decimals: u8,
@@ -65,6 +66,7 @@ pub mod governance_registry {
         registrar.realm = ctx.accounts.realm.key();
         registrar.voting_mint = ctx.accounts.voting_mint.key();
         registrar.authority = ctx.accounts.authority.key();
+        registrar.warmup_secs = warmup_secs;
 
         Ok(())
     }
@@ -103,11 +105,7 @@ pub mod governance_registry {
     }
 
     /// Creates a new deposit entry and updates it by transferring in tokens.
-    pub fn create_deposit(
-        ctx: Context<CreateDeposit>,
-        amount: u64,
-        lockup: Option<Lockup>,
-    ) -> Result<()> {
+    pub fn create_deposit(ctx: Context<CreateDeposit>, amount: u64, lockup: Lockup) -> Result<()> {
         // Creates the new deposit.
         let deposit_id = {
             let registrar = &ctx.accounts.deposit.registrar.load()?;
@@ -130,10 +128,7 @@ pub mod governance_registry {
             d_entry.is_used = true;
             d_entry.rate_idx = free_entry_idx as u8;
             d_entry.rate_idx = er_idx as u8;
-
-            if let Some(l) = lockup {
-                d_entry.lockup = l;
-            }
+            d_entry.lockup = lockup;
 
             free_entry_idx as u8
         };
@@ -236,11 +231,24 @@ pub mod governance_registry {
         Ok(())
     }
 
-    /// Updates a vesting schedule. Can only increase the lockup time or reduce
-    /// the period count (since that has the effect of increasing lockup time).
-    /// If all tokens are unlocked, then both can be updated arbitrarily.
-    pub fn update_schedule(ctx: Context<UpdateSchedule>) -> Result<()> {
-        // todo
+    /// Updates a vesting schedule. Can only increase the lockup time.
+    pub fn update_schedule(
+        ctx: Context<UpdateSchedule>,
+        deposit_id: u8,
+        end_ts: i64,
+    ) -> Result<()> {
+        let voter = &mut ctx.accounts.voter.load_mut()?;
+        require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
+
+        let d = &mut voter.deposits[deposit_id as usize];
+        require!(d.is_used, InvalidDepositId);
+
+        let mut new_lockup = d.lockup.clone();
+        new_lockup.end_ts = end_ts;
+
+        require!(new_lockup.days()? > d.lockup.days()?, InvalidEndTs);
+        d.lockup.end_ts = end_ts;
+
         Ok(())
     }
 
@@ -248,11 +256,13 @@ pub mod governance_registry {
     /// voter and writes it into a `VoteWeightRecord` account to be used by
     /// the SPL governance program.
     ///
-    /// When a voter locks up tokens with a vesting schedule, the voter's
-    /// voting power is scaled with a linear multiplier, but as time goes on,
-    /// that multiplier is decreased since the remaining lockup decreases.
+    /// This "revise" instruction should be called in the same transaction,
+    /// immediately before voting.
     pub fn decay_voting_power(ctx: Context<DecayVotingPower>) -> Result<()> {
-        // todo
+        let voter = ctx.accounts.voter.load()?;
+        let record = &mut ctx.accounts.vote_weight_record;
+        record.voter_weight = voter.weight()?;
+        record.voter_weight_expiry = Some(Clock::get()?.slot);
         Ok(())
     }
 
@@ -266,7 +276,12 @@ pub mod governance_registry {
 // Contexts.
 
 #[derive(Accounts)]
-#[instruction(registrar_bump: u8, voting_mint_bump: u8, voting_mint_decimals: u8)]
+#[instruction(
+    warmup_secs: i64,
+    registrar_bump: u8,
+    voting_mint_bump: u8,
+    voting_mint_decimals: u8,
+)]
 pub struct CreateRegistrar<'info> {
     #[account(
         init,
@@ -469,13 +484,30 @@ impl<'info> Withdraw<'info> {
 }
 
 #[derive(Accounts)]
-pub struct UpdateSchedule {
-    // todo
+pub struct UpdateSchedule<'info> {
+    #[account(mut, has_one = authority)]
+    voter: AccountLoader<'info, Voter>,
+    authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct DecayVotingPower<'info> {
+    #[account(
+        seeds = [vote_weight_record.realm.as_ref()],
+        bump = registrar.load()?.bump,
+    )]
+    registrar: AccountLoader<'info, Registrar>,
+    #[account(
+        has_one = registrar,
+        has_one = authority,
+    )]
+    voter: AccountLoader<'info, Voter>,
+    #[account(
+        mut,
+        constraint = vote_weight_record.governing_token_owner == voter.load()?.authority,
+    )]
     vote_weight_record: Account<'info, VoterWeightRecord>,
+    authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -495,6 +527,7 @@ pub struct Registrar {
     pub authority: Pubkey,
     pub realm: Pubkey,
     pub voting_mint: Pubkey,
+    pub warmup_secs: i64,
     pub voting_mint_bump: u8,
     pub bump: u8,
     pub rates: [ExchangeRateEntry; 32],
@@ -507,6 +540,15 @@ pub struct Voter {
     pub registrar: Pubkey,
     pub voter_bump: u8,
     pub deposits: [DepositEntry; 32],
+}
+
+impl Voter {
+    pub fn weight(&self) -> Result<u64> {
+        self.deposits
+            .iter()
+            .filter(|d| d.is_used)
+            .try_fold(0, |sum, d| d.voting_power().map(|vp| sum + vp))
+    }
 }
 
 /// Exchange rate for an asset that can be used to mint voting rights.
@@ -692,6 +734,7 @@ pub struct Lockup {
     pub kind: LockupKind,
     pub start_ts: i64,
     pub end_ts: i64,
+    pub padding: [u8; 16],
 }
 
 impl Lockup {
@@ -731,8 +774,8 @@ impl Lockup {
 #[repr(u8)]
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
 pub enum LockupKind {
-    Daily = 1u8 << 0,
-    Cliff = 1u8 << 1,
+    Daily,
+    Cliff,
 }
 
 // Error.
@@ -747,10 +790,18 @@ pub enum ErrorCode {
     ExchangeRateEntryNotFound,
     #[msg("")]
     DepositEntryNotFound,
+    #[msg("")]
     DepositEntryFull,
+    #[msg("")]
     VotingTokenNonZero,
+    #[msg("")]
     InvalidDepositId,
+    #[msg("")]
     InsufficientVestedTokens,
+    #[msg("")]
     UnableToConvert,
+    #[msg("")]
     InvalidLockupPeriod,
+    #[msg("")]
+    InvalidEndTs,
 }

@@ -131,6 +131,7 @@ describe("voting-rights", () => {
 
   it("Initializes a registrar", async () => {
     await program.rpc.createRegistrar(
+			new BN(0),
       registrarBump,
       votingMintBump,
       votingMintDecimals,
@@ -188,7 +189,8 @@ describe("voting-rights", () => {
 
   it("Deposits unlocked A tokens", async () => {
     const amount = new BN(10);
-    await program.rpc.createDeposit(amount, null, {
+		const lockup = { kind: { cliff: {} }, start_ts: 0, end_ts: 100 };
+    await program.rpc.createDeposit(amount, lockup, {
       accounts: {
         deposit: {
           voter,
