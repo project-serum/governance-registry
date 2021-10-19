@@ -187,10 +187,11 @@ describe("voting-rights", () => {
     });
   });
 
-  it("Deposits unlocked A tokens", async () => {
+  it("Deposits cliff locked A tokens", async () => {
     const amount = new BN(10);
-		const lockup = { kind: { cliff: {} }, start_ts: 0, end_ts: 100 };
-    await program.rpc.createDeposit(amount, lockup, {
+		const kind = { cliff: {} };
+		const days = 1;
+    await program.rpc.createDeposit(kind, amount, days, {
       accounts: {
         deposit: {
           voter,
@@ -209,14 +210,15 @@ describe("voting-rights", () => {
     const voterAccount = await program.account.voter.fetch(voter);
     const deposit = voterAccount.deposits[0];
     assert.ok(deposit.isUsed);
-    assert.ok(deposit.amount.toNumber() === 10);
+    assert.ok(deposit.amountDeposited.toNumber() === 10);
     assert.ok(deposit.rateIdx === 0);
 
     const vtAccount = await votingTokenClient.getAccountInfo(votingToken);
     assert.ok(vtAccount.amount.toNumber() === 10);
   });
 
-  it("Withdraws unlocked A tokens", async () => {
+	/*
+  it("Withdraws cliff locked A tokens", async () => {
     const depositId = 0;
     const amount = new BN(10);
     await program.rpc.withdraw(depositId, amount, {
@@ -242,8 +244,32 @@ describe("voting-rights", () => {
     const vtAccount = await votingTokenClient.getAccountInfo(votingToken);
     assert.ok(vtAccount.amount.toNumber() === 0);
   });
+	*/
 
-  it("Deposits locked A tokens", async () => {
-    // todo
+  it("Deposits daily locked A tokens", async () => {
+    const amount = new BN(10);
+		const kind = { daily: {} };
+		const days = 1;
+    await program.rpc.createDeposit(kind, amount, days, {
+      accounts: {
+        deposit: {
+          voter,
+          exchangeVault: exchangeVaultA,
+          depositToken: godA,
+          votingToken,
+          authority: program.provider.wallet.publicKey,
+          registrar,
+          depositMint: mintA,
+          votingMint,
+          tokenProgram,
+        },
+      },
+    });
+
+    const voterAccount = await program.account.voter.fetch(voter);
+    const deposit = voterAccount.deposits[0];
+    assert.ok(deposit.isUsed);
+    assert.ok(deposit.amountDeposited.toNumber() === 10);
+    assert.ok(deposit.rateIdx === 0);
   });
 });

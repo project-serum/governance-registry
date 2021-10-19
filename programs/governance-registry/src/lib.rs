@@ -105,11 +105,20 @@ pub mod governance_registry {
     }
 
     /// Creates a new deposit entry and updates it by transferring in tokens.
-    pub fn create_deposit(ctx: Context<CreateDeposit>, amount: u64, lockup: Lockup) -> Result<()> {
+    pub fn create_deposit(
+        ctx: Context<CreateDeposit>,
+        kind: LockupKind,
+        amount: u64,
+        days: i32,
+    ) -> Result<()> {
         // Creates the new deposit.
         let deposit_id = {
+            // Load accounts.
             let registrar = &ctx.accounts.deposit.registrar.load()?;
             let voter = &mut ctx.accounts.deposit.voter.load_mut()?;
+
+            // Set the lockup start timestamp, delayed by the warmup period.
+            let start_ts = Clock::get()?.unix_timestamp + registrar.warmup_secs;
 
             // Get the exchange rate entry associated with this deposit.
             let er_idx = registrar
@@ -128,7 +137,15 @@ pub mod governance_registry {
             d_entry.is_used = true;
             d_entry.rate_idx = free_entry_idx as u8;
             d_entry.rate_idx = er_idx as u8;
-            d_entry.lockup = lockup;
+            d_entry.amount_withdrawn = 0;
+            d_entry.lockup = Lockup {
+                kind,
+                start_ts,
+                end_ts: start_ts
+                    .checked_add(i64::from(days).checked_mul(SECS_PER_DAY).unwrap())
+                    .unwrap(),
+                padding: [0u8; 16],
+            };
 
             free_entry_idx as u8
         };
@@ -157,22 +174,31 @@ pub mod governance_registry {
 
         // Calculate the amount of voting tokens to mint at the specified
         // exchange rate.
-        let scaled_amount = er_entry.rate * amount;
+        let amount_scaled = er_entry.rate * amount;
 
         require!(voter.deposits.len() > id as usize, InvalidDepositId);
         let d_entry = &mut voter.deposits[id as usize];
-        d_entry.amount += amount;
-        d_entry.scaled_amount += scaled_amount;
+        d_entry.amount_deposited += amount;
+        d_entry.amount_scaled += amount_scaled;
 
         // Deposit tokens into the registrar.
         token::transfer(ctx.accounts.transfer_ctx(), amount)?;
+
+        // Thaw the account if it's frozen, so that we can mint.
+        if ctx.accounts.voting_token.is_frozen() {
+            token::thaw_account(
+                ctx.accounts
+                    .thaw_ctx()
+                    .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+            )?;
+        }
 
         // Mint vote tokens to the depositor.
         token::mint_to(
             ctx.accounts
                 .mint_to_ctx()
                 .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-            scaled_amount,
+            amount_scaled,
         )?;
 
         // Freeze the vote tokens; they are just used for UIs + accounting.
@@ -197,8 +223,12 @@ pub mod governance_registry {
         // Update the deposit bookkeeping.
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
         require!(deposit_entry.is_used, InvalidDepositId);
-        require!(deposit_entry.vested() >= amount, InsufficientVestedTokens);
-        deposit_entry.amount -= amount;
+        require!(deposit_entry.vested()? >= amount, InsufficientVestedTokens);
+        require!(
+            deposit_entry.amount_left() >= amount,
+            InsufficientVestedTokens
+        );
+        deposit_entry.amount_deposited -= amount;
 
         // Get the exchange rate for the token being withdrawn.
         let er_idx = registrar
@@ -208,7 +238,7 @@ pub mod governance_registry {
             .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
         let er_entry = registrar.rates[er_idx];
 
-        let scaled_amount = er_entry.rate * amount;
+        let amount_scaled = er_entry.rate * amount;
 
         // Transfer the tokens to withdraw.
         token::transfer(
@@ -226,27 +256,29 @@ pub mod governance_registry {
         )?;
 
         // Burn the voting tokens.
-        token::burn(ctx.accounts.burn_ctx(), scaled_amount)?;
+        token::burn(ctx.accounts.burn_ctx(), amount_scaled)?;
 
         Ok(())
     }
 
-    /// Updates a vesting schedule. Can only increase the lockup time.
-    pub fn update_schedule(
-        ctx: Context<UpdateSchedule>,
-        deposit_id: u8,
-        end_ts: i64,
-    ) -> Result<()> {
+    /// Resets a lockup to start at the current slot timestamp and to last for
+    /// `days`, which must be longer than the number of days left on the lockup.
+    pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, days: i64) -> Result<()> {
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
 
         let d = &mut voter.deposits[deposit_id as usize];
         require!(d.is_used, InvalidDepositId);
 
-        let mut new_lockup = d.lockup.clone();
-        new_lockup.end_ts = end_ts;
+        // The lockup period can only be increased.
+        require!(days as u64 > d.lockup.days_left()?, InvalidDays);
 
-        require!(new_lockup.days()? > d.lockup.days()?, InvalidEndTs);
+        let start_ts = Clock::get()?.unix_timestamp;
+        let end_ts = start_ts
+            .checked_add(days.checked_mul(SECS_PER_DAY).unwrap())
+            .unwrap();
+
+        d.lockup.start_ts = start_ts;
         d.lockup.end_ts = end_ts;
 
         Ok(())
@@ -369,6 +401,16 @@ impl<'info> UpdateDeposit<'info> {
             from: self.deposit_token.to_account_info(),
             to: self.exchange_vault.to_account_info(),
             authority: self.authority.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
+
+    fn thaw_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::ThawAccount<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::ThawAccount {
+            account: self.voting_token.to_account_info(),
+            mint: self.voting_mint.to_account_info(),
+            authority: self.registrar.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }
@@ -574,10 +616,13 @@ pub struct DepositEntry {
     pub rate_idx: u8,
 
     // Amount in the native currency deposited.
-    pub amount: u64,
+    pub amount_deposited: u64,
+
+    // Amount withdrawn from the deposit in the native currency.
+    pub amount_withdrawn: u64,
 
     // Amount in the native currency deposited, scaled by the exchange rate.
-    pub scaled_amount: u64,
+    pub amount_scaled: u64,
 
     // Locked state.
     pub lockup: Lockup,
@@ -679,6 +724,13 @@ impl DepositEntry {
     /// the voting power of all new depositors remains zero for an initial
     /// period of time, say, two weeks.
     pub fn voting_power(&self) -> Result<u64> {
+        let curr_ts = Clock::get()?.unix_timestamp;
+
+        // Voting power is zero until the warmup period ends.
+        if curr_ts < self.lockup.start_ts {
+            return Ok(0);
+        }
+
         match self.lockup.kind {
             LockupKind::Daily => self.voting_power_daily(),
             LockupKind::Cliff => self.voting_power_cliff(),
@@ -687,11 +739,11 @@ impl DepositEntry {
 
     fn voting_power_daily(&self) -> Result<u64> {
         let m = MAX_DAYS_LOCKED;
-        let n = self.lockup.days()?;
+        let n = self.lockup.days_total()?;
 
         // Voting power given at the beginning of the lockup.
         let voting_power_start = self
-            .scaled_amount
+            .amount_scaled
             .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
             .unwrap()
             .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
@@ -700,7 +752,7 @@ impl DepositEntry {
         // Voting power *if* it were to end today.
         let n = self.lockup.day_current()?;
         let voting_power_ending_now = self
-            .scaled_amount
+            .amount_scaled
             .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
             .unwrap()
             .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
@@ -718,7 +770,7 @@ impl DepositEntry {
         let voting_weight = self
             .lockup
             .days_left()?
-            .checked_mul(self.scaled_amount)
+            .checked_mul(self.amount_scaled)
             .unwrap()
             .checked_div(MAX_DAYS_LOCKED)
             .unwrap();
@@ -728,9 +780,45 @@ impl DepositEntry {
 
     /// Returns the amount of unlocked tokens for this deposit--in native units
     /// of the original token amount (not scaled by the exchange rate).
-    pub fn vested(&self) -> u64 {
-        // todo
-        self.amount
+    pub fn vested(&self) -> Result<u64> {
+        let curr_ts = Clock::get()?.unix_timestamp;
+        if curr_ts < self.lockup.start_ts {
+            return Ok(0);
+        }
+        match self.lockup.kind {
+            LockupKind::Daily => self.vested_daily(),
+            LockupKind::Cliff => self.vested_cliff(),
+        }
+    }
+
+    fn vested_daily(&self) -> Result<u64> {
+        let day_current = self.lockup.day_current()?;
+        let days_total = self.lockup.days_total()?;
+        if day_current >= days_total {
+            return Ok(self.amount_deposited);
+        }
+        let vested = self
+            .amount_deposited
+            .checked_mul(day_current)
+            .unwrap()
+            .checked_div(days_total)
+            .unwrap();
+        Ok(vested)
+    }
+
+    fn vested_cliff(&self) -> Result<u64> {
+        let curr_ts = Clock::get()?.unix_timestamp;
+        if curr_ts < self.lockup.end_ts {
+            return Ok(0);
+        }
+        Ok(self.amount_deposited)
+    }
+
+    /// Returns the amount left in the deposit, ignoring the vesting schedule.
+    pub fn amount_left(&self) -> u64 {
+        self.amount_deposited
+            .checked_sub(self.amount_withdrawn)
+            .unwrap()
     }
 }
 
@@ -738,40 +826,46 @@ impl DepositEntry {
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct Lockup {
     pub kind: LockupKind,
+    // Start of the lockup, shifted by the warmup period.
     pub start_ts: i64,
+    // End of the lockup, shifted by the warmup period.
     pub end_ts: i64,
     pub padding: [u8; 16],
 }
 
 impl Lockup {
+    /// Returns the number of days left on the lockup, ignoring the warmup
+    /// period.
     pub fn days_left(&self) -> Result<u64> {
-        // Lockup day the current timestamp is in.
-        let current_day = self.day_current()?;
-
-        // Days left on the lockup.
-        let lockup_days_left = self.days()?.checked_sub(current_day).unwrap();
-
-        Ok(lockup_days_left)
+        Ok(self.days_total()?.checked_sub(self.day_current()?).unwrap())
     }
 
+    /// Returns the current day in the vesting schedule. The warmup period is
+    /// treated as day zero.
     pub fn day_current(&self) -> Result<u64> {
+        let curr_ts = Clock::get()?.unix_timestamp;
+
+        // Warmup period hasn't ended.
+        if curr_ts < self.start_ts {
+            return Ok(0);
+        }
+
         u64::try_from({
-            let secs_elapsed = Clock::get()?
-                .unix_timestamp
-                .checked_sub(self.start_ts)
-                .unwrap();
+            let secs_elapsed = curr_ts.checked_sub(self.start_ts).unwrap();
             secs_elapsed.checked_sub(SECS_PER_DAY).unwrap()
         })
         .map_err(|_| ErrorCode::UnableToConvert.into())
     }
 
-    pub fn days(&self) -> Result<u64> {
+    /// Returns the total amount of days in the lockup period, ignoring the
+    /// warmup period.
+    pub fn days_total(&self) -> Result<u64> {
         // Number of seconds in the entire lockup.
         let lockup_secs = self.end_ts.checked_sub(self.start_ts).unwrap();
         require!(lockup_secs % SECS_PER_DAY == 0, InvalidLockupPeriod);
 
         // Total days in the entire lockup.
-        let lockup_days = u64::try_from(lockup_secs.checked_div(86_400).unwrap()).unwrap();
+        let lockup_days = u64::try_from(lockup_secs.checked_div(SECS_PER_DAY).unwrap()).unwrap();
 
         Ok(lockup_days)
     }
@@ -810,4 +904,6 @@ pub enum ErrorCode {
     InvalidLockupPeriod,
     #[msg("")]
     InvalidEndTs,
+    #[msg("")]
+    InvalidDays,
 }
