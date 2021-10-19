@@ -155,14 +155,14 @@ pub mod governance_registry {
             .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
         let er_entry = registrar.rates[er_idx];
 
-        require!(voter.deposits.len() > id as usize, InvalidDepositId);
-        let d_entry = &mut voter.deposits[id as usize];
-
-        d_entry.amount += amount;
-
         // Calculate the amount of voting tokens to mint at the specified
         // exchange rate.
         let scaled_amount = er_entry.rate * amount;
+
+        require!(voter.deposits.len() > id as usize, InvalidDepositId);
+        let d_entry = &mut voter.deposits[id as usize];
+        d_entry.amount += amount;
+        d_entry.scaled_amount += scaled_amount;
 
         // Deposit tokens into the registrar.
         token::transfer(ctx.accounts.transfer_ctx(), amount)?;
@@ -572,7 +572,12 @@ pub struct DepositEntry {
 
     // Points to the ExchangeRate this deposit uses.
     pub rate_idx: u8,
+
+    // Amount in the native currency deposited.
     pub amount: u64,
+
+    // Amount in the native currency deposited, scaled by the exchange rate.
+    pub scaled_amount: u64,
 
     // Locked state.
     pub lockup: Lockup,
@@ -686,7 +691,7 @@ impl DepositEntry {
 
         // Voting power given at the beginning of the lockup.
         let voting_power_start = self
-            .amount
+            .scaled_amount
             .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
             .unwrap()
             .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
@@ -695,7 +700,7 @@ impl DepositEntry {
         // Voting power *if* it were to end today.
         let n = self.lockup.day_current()?;
         let voting_power_ending_now = self
-            .amount
+            .scaled_amount
             .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
             .unwrap()
             .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
@@ -713,7 +718,7 @@ impl DepositEntry {
         let voting_weight = self
             .lockup
             .days_left()?
-            .checked_mul(self.amount)
+            .checked_mul(self.scaled_amount)
             .unwrap()
             .checked_div(MAX_DAYS_LOCKED)
             .unwrap();
@@ -721,7 +726,8 @@ impl DepositEntry {
         Ok(voting_weight)
     }
 
-    /// Returns the amount of unlocked tokens for this deposit.
+    /// Returns the amount of unlocked tokens for this deposit--in native units
+    /// of the original token amount (not scaled by the exchange rate).
     pub fn vested(&self) -> u64 {
         // todo
         self.amount
