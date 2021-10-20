@@ -5,12 +5,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::mem::size_of;
 
 #[derive(Accounts)]
-#[instruction(
-    warmup_secs: i64,
-    registrar_bump: u8,
-    voting_mint_bump: u8,
-    voting_mint_decimals: u8,
-)]
+#[instruction(warmup_secs: i64, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
     #[account(
         init,
@@ -20,16 +15,6 @@ pub struct CreateRegistrar<'info> {
         space = 8 + size_of::<Registrar>()
     )]
     pub registrar: AccountLoader<'info, Registrar>,
-    #[account(
-        init,
-        seeds = [registrar.key().as_ref()],
-        bump = voting_mint_bump,
-        payer = payer,
-        mint::authority = registrar,
-        mint::freeze_authority = registrar,
-        mint::decimals = voting_mint_decimals,
-    )]
-    pub voting_mint: Account<'info, Mint>,
     pub realm: UncheckedAccount<'info>,
     pub authority: UncheckedAccount<'info>,
     pub payer: Signer<'info>,
@@ -49,14 +34,6 @@ pub struct CreateVoter<'info> {
         space = 8 + size_of::<Voter>(),
     )]
     pub voter: AccountLoader<'info, Voter>,
-    #[account(
-        init,
-        payer = authority,
-        associated_token::authority = authority,
-        associated_token::mint = voting_mint,
-    )]
-    pub voting_token: Account<'info, TokenAccount>,
-    pub voting_mint: Account<'info, Mint>,
     pub registrar: AccountLoader<'info, Registrar>,
     pub authority: Signer<'info>,
     pub token_program: Program<'info, Token>,
@@ -66,20 +43,30 @@ pub struct CreateVoter<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(rate: ExchangeRateEntry)]
+#[instruction(idx: u16, rate: ExchangeRateEntry)]
 pub struct CreateExchangeRate<'info> {
     #[account(
         init,
-        payer = payer,
+        payer = authority,
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
     pub exchange_vault: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        seeds = [registrar.key().as_ref(), deposit_mint.key().as_ref()],
+        bump,
+        payer = authority,
+        mint::authority = registrar,
+        mint::freeze_authority = registrar,
+        mint::decimals = deposit_mint.decimals,
+    )]
+    pub voting_mint: Account<'info, Mint>,
     pub deposit_mint: Account<'info, Mint>,
     #[account(mut, has_one = authority)]
     pub registrar: AccountLoader<'info, Registrar>,
+    #[account(mut)]
     pub authority: Signer<'info>,
-    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -93,7 +80,6 @@ pub struct CreateDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
-    #[account(has_one = voting_mint)]
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
@@ -109,16 +95,24 @@ pub struct UpdateDeposit<'info> {
     )]
     pub deposit_token: Account<'info, TokenAccount>,
     #[account(
-        mut,
+        init_if_needed,
+        payer = authority,
         associated_token::authority = authority,
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
     pub authority: Signer<'info>,
     pub deposit_mint: Account<'info, Mint>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [registrar.key().as_ref(), deposit_token.mint.as_ref()],
+        bump,
+    )]
     pub voting_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 impl<'info> UpdateDeposit<'info> {
@@ -165,7 +159,6 @@ impl<'info> UpdateDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    #[account(has_one = voting_mint)]
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = registrar, has_one = authority)]
     pub voter: AccountLoader<'info, Voter>,
@@ -182,7 +175,11 @@ pub struct Withdraw<'info> {
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [registrar.load()?.realm.as_ref(), voting_token.mint.as_ref()],
+        bump,
+    )]
     pub voting_mint: Account<'info, Mint>,
     #[account(mut)]
     pub destination: Account<'info, TokenAccount>,

@@ -67,14 +67,10 @@ pub mod governance_registry {
         ctx: Context<CreateRegistrar>,
         warmup_secs: i64,
         registrar_bump: u8,
-        voting_mint_bump: u8,
-        _voting_mint_decimals: u8,
     ) -> Result<()> {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
         registrar.bump = registrar_bump;
-        registrar.voting_mint_bump = voting_mint_bump;
         registrar.realm = ctx.accounts.realm.key();
-        registrar.voting_mint = ctx.accounts.voting_mint.key();
         registrar.authority = ctx.accounts.authority.key();
         registrar.warmup_secs = warmup_secs;
 
@@ -94,7 +90,6 @@ pub mod governance_registry {
         er: ExchangeRateEntry,
     ) -> Result<()> {
         require!(er.rate > 0, InvalidRate);
-
         let registrar = &mut ctx.accounts.registrar.load_mut()?;
         registrar.rates[idx as usize] = er;
         Ok(())

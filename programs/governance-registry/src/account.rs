@@ -20,9 +20,7 @@ pub const MAX_DAYS_LOCKED: u64 = 2555;
 pub struct Registrar {
     pub authority: Pubkey,
     pub realm: Pubkey,
-    pub voting_mint: Pubkey,
     pub warmup_secs: i64,
-    pub voting_mint_bump: u8,
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],

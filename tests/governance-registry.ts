@@ -32,14 +32,21 @@ describe("voting-rights", () => {
 
   // Uninitialized variables shared across tests.
   let registrar: PublicKey,
-    votingMint: PublicKey,
+  votingMintA: PublicKey,
+	votingMintB: PublicKey,
     voter: PublicKey,
     votingToken: PublicKey,
     exchangeVaultA: PublicKey,
     exchangeVaultB: PublicKey;
-  let registrarBump: number, votingMintBump: number, voterBump: number;
+  let registrarBump: number,
+	votingMintBumpA: number,
+	votingMintBumpB: number,
+	voterBump: number;
   let mintA: PublicKey, mintB: PublicKey, godA: PublicKey, godB: PublicKey;
-  let tokenAClient: Token, tokenBClient: Token, votingTokenClient: Token;
+  let tokenAClient: Token,
+	tokenBClient: Token,
+	votingTokenClientA: Token,
+	votingTokenClientB: Token;
 
   it("Creates tokens and mints", async () => {
     const [_mintA, _godA] = await createMintAndVault(
@@ -66,8 +73,12 @@ describe("voting-rights", () => {
       [realm.toBuffer()],
       program.programId
     );
-    const [_votingMint, _votingMintBump] = await PublicKey.findProgramAddress(
-      [_registrar.toBuffer()],
+    const [_votingMintA, _votingMintBumpA] = await PublicKey.findProgramAddress(
+      [_registrar.toBuffer(), mintA.toBuffer()],
+      program.programId
+    );
+    const [_votingMintB, _votingMintBumpB] = await PublicKey.findProgramAddress(
+      [_registrar.toBuffer(), mintB.toBuffer()],
       program.programId
     );
     const [_voter, _voterBump] = await PublicKey.findProgramAddress(
@@ -77,7 +88,7 @@ describe("voting-rights", () => {
     votingToken = await Token.getAssociatedTokenAddress(
       associatedTokenProgram,
       tokenProgram,
-      _votingMint,
+      _votingMintA,
       program.provider.wallet.publicKey
     );
     exchangeVaultA = await Token.getAssociatedTokenAddress(
@@ -96,11 +107,13 @@ describe("voting-rights", () => {
     );
 
     registrar = _registrar;
-    votingMint = _votingMint;
+    votingMintA = _votingMintA;
+		votingMintB = _votingMintB;
     voter = _voter;
 
     registrarBump = _registrarBump;
-    votingMintBump = _votingMintBump;
+    votingMintBumpA = _votingMintBumpA;
+		votingMintBumpB = _votingMintBumpB;
     voterBump = _voterBump;
   });
 
@@ -119,9 +132,16 @@ describe("voting-rights", () => {
       // @ts-ignore
       program.provider.wallet.payer
     );
-    votingTokenClient = new Token(
+    votingTokenClientA = new Token(
       program.provider.connection,
-      votingMint,
+      votingMintA,
+      TOKEN_PROGRAM_ID,
+      // @ts-ignore
+      program.provider.wallet.payer
+    );
+    votingTokenClientB = new Token(
+      program.provider.connection,
+      votingMintB,
       TOKEN_PROGRAM_ID,
       // @ts-ignore
       program.provider.wallet.payer
@@ -132,12 +152,9 @@ describe("voting-rights", () => {
     await program.rpc.createRegistrar(
       new BN(0),
       registrarBump,
-      votingMintBump,
-      votingMintDecimals,
       {
         accounts: {
           registrar,
-          votingMint,
           realm,
           authority: program.provider.wallet.publicKey,
           payer: program.provider.wallet.publicKey,
@@ -159,9 +176,9 @@ describe("voting-rights", () => {
       accounts: {
         exchangeVault: exchangeVaultA,
         depositMint: mintA,
+				votingMint: votingMintA,
         registrar,
         authority: program.provider.wallet.publicKey,
-        payer: program.provider.wallet.publicKey,
         rent,
         tokenProgram,
         associatedTokenProgram,
@@ -180,9 +197,9 @@ describe("voting-rights", () => {
       accounts: {
         exchangeVault: exchangeVaultB,
         depositMint: mintB,
+				votingMint: votingMintB,
         registrar,
         authority: program.provider.wallet.publicKey,
-        payer: program.provider.wallet.publicKey,
         rent,
         tokenProgram,
         associatedTokenProgram,
@@ -195,8 +212,6 @@ describe("voting-rights", () => {
     await program.rpc.createVoter(voterBump, {
       accounts: {
         voter,
-        votingToken,
-        votingMint,
         registrar,
         authority: program.provider.wallet.publicKey,
         systemProgram,
@@ -221,8 +236,11 @@ describe("voting-rights", () => {
           authority: program.provider.wallet.publicKey,
           registrar,
           depositMint: mintA,
-          votingMint,
+          votingMint: votingMintA,
           tokenProgram,
+					systemProgram,
+					associatedTokenProgram,
+					rent,
         },
       },
     });
@@ -233,7 +251,7 @@ describe("voting-rights", () => {
     assert.ok(deposit.amountDeposited.toNumber() === 10);
     assert.ok(deposit.rateIdx === 0);
 
-    const vtAccount = await votingTokenClient.getAccountInfo(votingToken);
+    const vtAccount = await votingTokenClientA.getAccountInfo(votingToken);
     assert.ok(vtAccount.amount.toNumber() === 10);
   });
 
@@ -280,8 +298,11 @@ describe("voting-rights", () => {
           authority: program.provider.wallet.publicKey,
           registrar,
           depositMint: mintA,
-          votingMint,
+          votingMint: votingMintA,
           tokenProgram,
+					systemProgram,
+					associatedTokenProgram,
+					rent,
         },
       },
     });

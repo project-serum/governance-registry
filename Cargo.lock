@@ -26,7 +26,6 @@ checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -39,7 +38,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -53,7 +51,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -64,7 +61,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -76,7 +72,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-interface"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -89,7 +84,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -101,7 +95,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-state"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -113,7 +106,6 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -125,7 +117,6 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -145,7 +136,6 @@ dependencies = [
 [[package]]
 name = "anchor-spl"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anchor-lang",
  "lazy_static",
@@ -159,7 +149,6 @@ dependencies = [
 [[package]]
 name = "anchor-syn"
 version = "0.17.0"
-source = "git+https://github.com/project-serum/anchor?branch=armani/solana#ecc5bce19a5cc69fd021227c5dfdafffd273ad69"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
