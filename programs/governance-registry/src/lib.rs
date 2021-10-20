@@ -1,23 +1,26 @@
+use access_control::*;
 use account::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
 use context::*;
 use error::*;
 
+mod access_control;
 mod account;
 mod context;
 mod error;
 
+// The program address.
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 /// # Introduction
 ///
 /// The governance registry is an "addin" to the SPL governance program that
-/// allows one to both many different ypes of tokens for voting and to scale
-/// voting power as a linear function of time locked--subject to some maximum
-/// upper bound.
+/// allows one to both vote with many different ypes of tokens for voting and to
+/// scale voting power as a linear function of time locked--subject to some
+/// maximum upper bound.
 ///
-/// The overall process is as follows:
+/// The flow for voting with this program is as follows:
 ///
 /// - Create a SPL governance realm.
 /// - Create a governance registry account.
@@ -41,6 +44,19 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 /// Instead, it simply writes a `VoterWeightRecord` account with a well defined
 /// format, which is then used by SPL governance as the voting power measurement
 /// for a given user.
+///
+/// # Max Vote Weight
+///
+/// Given that one can use multiple tokens to vote, the max vote weight needs
+/// to be a function of the total supply of all tokens, converted into a common
+/// currency. For example, if you have Token A and Token B, where 1 Token B =
+/// 10 Token A, then the `max_vote_weight` should be `supply(A) + supply(B)*10`
+/// where both are converted into common decimals. Then, when calculating the
+/// weight of an individual voter, one can convert B into A via the given
+/// exchange rate, which must be fixed.
+///
+/// Note that the above also implies that the `max_vote_weight` must fit into
+/// a u64.
 #[program]
 pub mod governance_registry {
     use super::*;
@@ -65,6 +81,25 @@ pub mod governance_registry {
         Ok(())
     }
 
+    /// Creates a new exchange rate for a given mint. This allows a voter to
+    /// deposit the mint in exchange for vTokens. There can only be a single
+    /// exchange rate per mint.
+    ///
+    /// WARNING: This can be freely called when any of the rates are empty.
+    ///          This should be called immediately upon creation of a Registrar.
+    #[access_control(rate_is_empty(&ctx, idx))]
+    pub fn create_exchange_rate(
+        ctx: Context<CreateExchangeRate>,
+        idx: u16,
+        er: ExchangeRateEntry,
+    ) -> Result<()> {
+        require!(er.rate > 0, InvalidRate);
+
+        let registrar = &mut ctx.accounts.registrar.load_mut()?;
+        registrar.rates[idx as usize] = er;
+        Ok(())
+    }
+
     /// Creates a new voter account. There can only be a single voter per
     /// user wallet.
     pub fn create_voter(ctx: Context<CreateVoter>, voter_bump: u8) -> Result<()> {
@@ -73,28 +108,6 @@ pub mod governance_registry {
         voter.authority = ctx.accounts.authority.key();
         voter.registrar = ctx.accounts.registrar.key();
 
-        Ok(())
-    }
-
-    /// Creates a new exchange rate for a given mint. This allows a voter to
-    /// deposit the mint in exchange for vTokens. There can only be a single
-    /// exchange rate per mint.
-    pub fn create_exchange_rate(
-        ctx: Context<CreateExchangeRate>,
-        er: ExchangeRateEntry,
-    ) -> Result<()> {
-        require!(er.rate > 0, InvalidRate);
-
-        let mut er = er;
-        er.is_used = false;
-
-        let registrar = &mut ctx.accounts.registrar.load_mut()?;
-        let idx = registrar
-            .rates
-            .iter()
-            .position(|r| !r.is_used)
-            .ok_or(ErrorCode::RatesFull)?;
-        registrar.rates[idx] = er;
         Ok(())
     }
 

@@ -26,4 +26,8 @@ pub enum ErrorCode {
     InvalidEndTs,
     #[msg("")]
     InvalidDays,
+    #[msg("")]
+    RateNotZero,
+    #[msg("")]
+    InvalidIndex,
 }

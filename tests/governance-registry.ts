@@ -42,18 +42,17 @@ describe("voting-rights", () => {
   let tokenAClient: Token, tokenBClient: Token, votingTokenClient: Token;
 
   it("Creates tokens and mints", async () => {
-    const decimals = 6;
     const [_mintA, _godA] = await createMintAndVault(
       program.provider,
       new BN("1000000000000000000"),
       undefined,
-      decimals
+      6
     );
     const [_mintB, _godB] = await createMintAndVault(
       program.provider,
       new BN("1000000000000000000"),
       undefined,
-      decimals
+      0
     );
 
     mintA = _mintA;
@@ -131,7 +130,7 @@ describe("voting-rights", () => {
 
   it("Initializes a registrar", async () => {
     await program.rpc.createRegistrar(
-			new BN(0),
+      new BN(0),
       registrarBump,
       votingMintBump,
       votingMintDecimals,
@@ -150,6 +149,48 @@ describe("voting-rights", () => {
     );
   });
 
+  it("Adds an exchange rate A", async () => {
+    const er = {
+      mint: mintA,
+      rate: new BN(1),
+      decimals: 6,
+    };
+    await program.rpc.createExchangeRate(0, er, {
+      accounts: {
+        exchangeVault: exchangeVaultA,
+        depositMint: mintA,
+        registrar,
+        authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
+        rent,
+        tokenProgram,
+        associatedTokenProgram,
+        systemProgram,
+      },
+    });
+  });
+
+  it("Adds an exchange rate B", async () => {
+    const er = {
+      mint: mintB,
+      rate: new BN(1000000),
+      decimals: 0,
+    };
+    await program.rpc.createExchangeRate(1, er, {
+      accounts: {
+        exchangeVault: exchangeVaultB,
+        depositMint: mintB,
+        registrar,
+        authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
+        rent,
+        tokenProgram,
+        associatedTokenProgram,
+        systemProgram,
+      },
+    });
+  });
+
   it("Initializes a voter", async () => {
     await program.rpc.createVoter(voterBump, {
       accounts: {
@@ -166,31 +207,10 @@ describe("voting-rights", () => {
     });
   });
 
-  it("Adds an exchange rate", async () => {
-    const er = {
-      isUsed: false,
-      mint: mintA,
-      rate: new BN(1),
-    };
-    await program.rpc.createExchangeRate(er, {
-      accounts: {
-        exchangeVault: exchangeVaultA,
-        depositMint: mintA,
-        registrar,
-        authority: program.provider.wallet.publicKey,
-        payer: program.provider.wallet.publicKey,
-        rent,
-        tokenProgram,
-        associatedTokenProgram,
-        systemProgram,
-      },
-    });
-  });
-
   it("Deposits cliff locked A tokens", async () => {
     const amount = new BN(10);
-		const kind = { cliff: {} };
-		const days = 1;
+    const kind = { cliff: {} };
+    const days = 1;
     await program.rpc.createDeposit(kind, amount, days, {
       accounts: {
         deposit: {
@@ -217,7 +237,7 @@ describe("voting-rights", () => {
     assert.ok(vtAccount.amount.toNumber() === 10);
   });
 
-	/*
+  /*
   it("Withdraws cliff locked A tokens", async () => {
     const depositId = 0;
     const amount = new BN(10);
@@ -244,12 +264,12 @@ describe("voting-rights", () => {
     const vtAccount = await votingTokenClient.getAccountInfo(votingToken);
     assert.ok(vtAccount.amount.toNumber() === 0);
   });
-	*/
+  */
 
   it("Deposits daily locked A tokens", async () => {
     const amount = new BN(10);
-		const kind = { daily: {} };
-		const days = 1;
+    const kind = { daily: {} };
+    const days = 1;
     await program.rpc.createDeposit(kind, amount, days, {
       accounts: {
         deposit: {

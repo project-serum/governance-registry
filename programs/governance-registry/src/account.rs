@@ -4,6 +4,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::vote_weight_record;
 use std::convert::TryFrom;
 
+/// Generate a VoteWeightRecord Anchor wrapper, owned by the current program.
+/// VoteWeightRecords are unique in that they are defined by the SPL governance
+/// program, but they are actaully owned by this program.
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
@@ -21,7 +24,8 @@ pub struct Registrar {
     pub warmup_secs: i64,
     pub voting_mint_bump: u8,
     pub bump: u8,
-    pub rates: [ExchangeRateEntry; 32],
+    // The length should be adjusted for one's use case.
+    pub rates: [ExchangeRateEntry; 2],
 }
 
 /// User account for minting voting rights.
@@ -44,13 +48,11 @@ impl Voter {
 
 /// Exchange rate for an asset that can be used to mint voting rights.
 #[zero_copy]
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct ExchangeRateEntry {
-    // True if the exchange rate entry is being used.
-    pub is_used: bool,
-
     pub mint: Pubkey,
     pub rate: u64,
+    pub decimals: u8,
 }
 
 unsafe impl Zeroable for ExchangeRateEntry {}
