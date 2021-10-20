@@ -110,7 +110,7 @@ impl DepositEntry {
     /// ### Decay
     ///
     /// As time passes, the voting power should decay proportionally, in which
-    /// case one can substitute for `number_days` for the number of days
+    /// case one can substitute for `number_days` the number of days
     /// remaining on the lockup.
     ///
     /// ## Daily Vesting Lockup
@@ -163,9 +163,8 @@ impl DepositEntry {
     ///
     /// ### Decay
     ///
-    /// To calculate the decay, we can simply re-use the above sum to caculate
-    /// the amount vested from the start up until the current day, and subtract
-    /// that from the total.
+    /// To calculate the decay, we can simply re-use the above sum, adjusting
+    /// `n` for the number of days left in the lockup.
     ///
     /// ## Voting Power Warmup
     ///
@@ -190,28 +189,13 @@ impl DepositEntry {
 
     fn voting_power_daily(&self) -> Result<u64> {
         let m = MAX_DAYS_LOCKED;
-        let n = self.lockup.days_total()?;
+        let n = self.lockup.days_left()?;
 
-        // Voting power given at the beginning of the lockup.
-        let voting_power_start = self
+        let decayed_vote_weight = self
             .amount_scaled
             .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
             .unwrap()
             .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
-            .unwrap();
-
-        // Voting power *if* it were to end today.
-        let n = self.lockup.day_current()?;
-        let voting_power_ending_now = self
-            .amount_scaled
-            .checked_mul(n.checked_mul(n.checked_add(1).unwrap()).unwrap())
-            .unwrap()
-            .checked_div(m.checked_mul(n).unwrap().checked_mul(2).unwrap())
-            .unwrap();
-
-        // Current decayed voting power.
-        let decayed_vote_weight = voting_power_start
-            .checked_sub(voting_power_ending_now)
             .unwrap();
 
         Ok(decayed_vote_weight)
