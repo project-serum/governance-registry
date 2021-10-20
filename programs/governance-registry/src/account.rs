@@ -4,9 +4,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::vote_weight_record;
 use std::convert::TryFrom;
 
-/// Generate a VoteWeightRecord Anchor wrapper, owned by the current program.
-/// VoteWeightRecords are unique in that they are defined by the SPL governance
-/// program, but they are actaully owned by this program.
+// Generate a VoteWeightRecord Anchor wrapper, owned by the current program.
+// VoteWeightRecords are unique in that they are defined by the SPL governance
+// program, but they are actaully owned by this program.
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
@@ -265,6 +265,7 @@ pub struct Lockup {
     pub start_ts: i64,
     // End of the lockup, shifted by the warmup period.
     pub end_ts: i64,
+    // Empty bytes for future upgrades.
     pub padding: [u8; 16],
 }
 
