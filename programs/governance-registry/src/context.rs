@@ -217,6 +217,16 @@ impl<'info> Withdraw<'info> {
         };
         CpiContext::new(program, accounts)
     }
+
+    pub fn freeze_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::FreezeAccount<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::FreezeAccount {
+            account: self.voting_token.to_account_info(),
+            mint: self.voting_mint.to_account_info(),
+            authority: self.registrar.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
 }
 
 #[derive(Accounts)]

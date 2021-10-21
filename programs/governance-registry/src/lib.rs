@@ -218,11 +218,12 @@ pub mod governance_registry {
     ///
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
+        // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
 
-        // Update the deposit bookkeeping.
+        // Get the deposit being withdrawn from.
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
         require!(deposit_entry.is_used, InvalidDepositId);
         require!(deposit_entry.vested()? >= amount, InsufficientVestedTokens);
@@ -230,17 +231,23 @@ pub mod governance_registry {
             deposit_entry.amount_left() >= amount,
             InsufficientVestedTokens
         );
+
+        // Scale the amount being withdrawn by the exchange rate.
+        let amount_scaled = {
+            // Get the exchange rate for the token being withdrawn.
+            let er_idx = registrar
+                .rates
+                .iter()
+                .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
+                .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+            let er_entry = registrar.rates[er_idx];
+            er_entry.rate * amount
+        };
+
+        // Update deposit book keeping.
         deposit_entry.amount_deposited -= amount;
-
-        // Get the exchange rate for the token being withdrawn.
-        let er_idx = registrar
-            .rates
-            .iter()
-            .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
-            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-        let er_entry = registrar.rates[er_idx];
-
-        let amount_scaled = er_entry.rate * amount;
+        deposit_entry.amount_withdrawn += amount;
+        deposit_entry.amount_scaled -= amount_scaled;
 
         // Transfer the tokens to withdraw.
         token::transfer(
@@ -250,7 +257,7 @@ pub mod governance_registry {
             amount,
         )?;
 
-        // Unfreeze the voting mint.
+        // Unfreeze the voting token.
         token::thaw_account(
             ctx.accounts
                 .thaw_ctx()
@@ -258,7 +265,14 @@ pub mod governance_registry {
         )?;
 
         // Burn the voting tokens.
-        token::burn(ctx.accounts.burn_ctx(), amount_scaled)?;
+        token::burn(ctx.accounts.burn_ctx(), amount)?;
+
+        // Re-freeze the vote token.
+        token::freeze_account(
+            ctx.accounts
+                .freeze_ctx()
+                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+        )?;
 
         Ok(())
     }
