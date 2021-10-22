@@ -279,6 +279,5 @@ pub struct CloseVoter<'info> {
     #[account(mut, has_one = authority, close = sol_destination)]
     pub voter: AccountLoader<'info, Voter>,
     pub authority: Signer<'info>,
-    pub voting_token: Account<'info, TokenAccount>,
     pub sol_destination: UncheckedAccount<'info>,
 }

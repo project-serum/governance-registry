@@ -194,7 +194,7 @@ pub mod governance_registry {
 
         // Calculate the amount of voting tokens to mint at the specified
         // exchange rate.
-        let amount_scaled = er_entry.rate * amount;
+        let amount_scaled = er_entry.rate.checked_mul(amount).unwrap();
 
         require!(voter.deposits.len() > id as usize, InvalidDepositId);
         let d_entry = &mut voter.deposits[id as usize];
@@ -263,9 +263,9 @@ pub mod governance_registry {
         };
 
         // Update deposit book keeping.
+        deposit_entry.amount_scaled -= amount_scaled;
         deposit_entry.amount_deposited -= amount;
         deposit_entry.amount_withdrawn += amount;
-        deposit_entry.amount_scaled -= amount_scaled;
 
         // Transfer the tokens to withdraw.
         token::transfer(
@@ -334,8 +334,14 @@ pub mod governance_registry {
     }
 
     /// Closes the voter account, allowing one to retrieve rent exemption SOL.
+    /// Only accounts with no remaining deposits can be closed.
     pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
-        require!(ctx.accounts.voting_token.amount > 0, VotingTokenNonZero);
+        let voter = &ctx.accounts.voter.load()?;
+        let amount = voter.deposits.iter().fold(0u64, |sum, d| {
+            sum.checked_add(d.amount_deposited.checked_sub(d.amount_withdrawn).unwrap())
+                .unwrap()
+        });
+        require!(amount == 0, VotingTokenNonZero);
         Ok(())
     }
 }
