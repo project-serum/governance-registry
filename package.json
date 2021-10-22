@@ -1,5 +1,5 @@
 {
-	"scripts": {
+  "scripts": {
     "lint:fix": "prettier tests/** -w",
     "test": "anchor test"
   },

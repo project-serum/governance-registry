@@ -20,6 +20,7 @@ pub const MAX_DAYS_LOCKED: u64 = 2555;
 pub struct Registrar {
     pub authority: Pubkey,
     pub realm: Pubkey,
+    pub realm_community_mint: Pubkey,
     pub warmup_secs: i64,
     pub bump: u8,
     // The length should be adjusted for one's use case.
@@ -32,6 +33,7 @@ pub struct Voter {
     pub authority: Pubkey,
     pub registrar: Pubkey,
     pub voter_bump: u8,
+    pub voter_weight_record_bump: u8,
     pub deposits: [DepositEntry; 32],
 }
 
@@ -286,7 +288,7 @@ impl Lockup {
 
         u64::try_from({
             let secs_elapsed = curr_ts.checked_sub(self.start_ts).unwrap();
-            secs_elapsed.checked_sub(SECS_PER_DAY).unwrap()
+            secs_elapsed.checked_div(SECS_PER_DAY).unwrap()
         })
         .map_err(|_| ErrorCode::UnableToConvert.into())
     }

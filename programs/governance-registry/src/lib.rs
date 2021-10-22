@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token;
 use context::*;
 use error::*;
+use spl_governance::addins::voter_weight::VoterWeightAccountType;
 
 mod access_control;
 mod account;
@@ -71,6 +72,7 @@ pub mod governance_registry {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
         registrar.bump = registrar_bump;
         registrar.realm = ctx.accounts.realm.key();
+        registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
         registrar.warmup_secs = warmup_secs;
 
@@ -97,11 +99,27 @@ pub mod governance_registry {
 
     /// Creates a new voter account. There can only be a single voter per
     /// user wallet.
-    pub fn create_voter(ctx: Context<CreateVoter>, voter_bump: u8) -> Result<()> {
+    pub fn create_voter(
+        ctx: Context<CreateVoter>,
+        voter_bump: u8,
+        voter_weight_record_bump: u8,
+    ) -> Result<()> {
+        // Load accounts.
+        let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_init()?;
+        let voter_weight_record = &mut ctx.accounts.voter_weight_record;
+
+        // Init the voter.
         voter.voter_bump = voter_bump;
+        voter.voter_weight_record_bump = voter_weight_record_bump;
         voter.authority = ctx.accounts.authority.key();
         voter.registrar = ctx.accounts.registrar.key();
+
+        // Init the voter weight record.
+        voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
+        voter_weight_record.realm = registrar.realm;
+        voter_weight_record.governing_token_mint = registrar.realm_community_mint;
+        voter_weight_record.governing_token_owner = ctx.accounts.authority.key();
 
         Ok(())
     }
@@ -306,11 +324,12 @@ pub mod governance_registry {
     ///
     /// This "revise" instruction should be called in the same transaction,
     /// immediately before voting.
-    pub fn decay_voting_power(ctx: Context<DecayVotingPower>) -> Result<()> {
+    pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
         let voter = ctx.accounts.voter.load()?;
-        let record = &mut ctx.accounts.vote_weight_record;
+        let record = &mut ctx.accounts.voter_weight_record;
         record.voter_weight = voter.weight()?;
         record.voter_weight_expiry = Some(Clock::get()?.slot);
+
         Ok(())
     }
 

@@ -32,21 +32,27 @@ describe("voting-rights", () => {
 
   // Uninitialized variables shared across tests.
   let registrar: PublicKey,
-  votingMintA: PublicKey,
-	votingMintB: PublicKey,
+    votingMintA: PublicKey,
+    votingMintB: PublicKey,
     voter: PublicKey,
+    voterWeightRecord: PublicKey,
     votingToken: PublicKey,
     exchangeVaultA: PublicKey,
     exchangeVaultB: PublicKey;
   let registrarBump: number,
-	votingMintBumpA: number,
-	votingMintBumpB: number,
-	voterBump: number;
-  let mintA: PublicKey, mintB: PublicKey, godA: PublicKey, godB: PublicKey;
+    votingMintBumpA: number,
+    votingMintBumpB: number,
+    voterBump: number,
+    voterWeightRecordBump: number;
+  let mintA: PublicKey,
+    mintB: PublicKey,
+    godA: PublicKey,
+    godB: PublicKey,
+    realmCommunityMint: PublicKey;
   let tokenAClient: Token,
-	tokenBClient: Token,
-	votingTokenClientA: Token,
-	votingTokenClientB: Token;
+    tokenBClient: Token,
+    votingTokenClientA: Token,
+    votingTokenClientB: Token;
 
   it("Creates tokens and mints", async () => {
     const [_mintA, _godA] = await createMintAndVault(
@@ -66,6 +72,7 @@ describe("voting-rights", () => {
     mintB = _mintB;
     godA = _godA;
     godB = _godB;
+    realmCommunityMint = mintA;
   });
 
   it("Creates PDAs", async () => {
@@ -85,6 +92,15 @@ describe("voting-rights", () => {
       [_registrar.toBuffer(), program.provider.wallet.publicKey.toBuffer()],
       program.programId
     );
+    const [_voterWeightRecord, _voterWeightRecordBump] =
+      await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("voter-weight-record"),
+          _registrar.toBuffer(),
+          program.provider.wallet.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
     votingToken = await Token.getAssociatedTokenAddress(
       associatedTokenProgram,
       tokenProgram,
@@ -108,13 +124,15 @@ describe("voting-rights", () => {
 
     registrar = _registrar;
     votingMintA = _votingMintA;
-		votingMintB = _votingMintB;
+    votingMintB = _votingMintB;
     voter = _voter;
 
     registrarBump = _registrarBump;
     votingMintBumpA = _votingMintBumpA;
-		votingMintBumpB = _votingMintBumpB;
+    votingMintBumpB = _votingMintBumpB;
     voterBump = _voterBump;
+    voterWeightRecord = _voterWeightRecord;
+    voterWeightRecordBump = _voterWeightRecordBump;
   });
 
   it("Creates token clients", async () => {
@@ -149,21 +167,18 @@ describe("voting-rights", () => {
   });
 
   it("Initializes a registrar", async () => {
-    await program.rpc.createRegistrar(
-      new BN(0),
-      registrarBump,
-      {
-        accounts: {
-          registrar,
-          realm,
-          authority: program.provider.wallet.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram,
-          tokenProgram,
-          rent,
-        },
-      }
-    );
+    await program.rpc.createRegistrar(new BN(0), registrarBump, {
+      accounts: {
+        registrar,
+        realm,
+        realmCommunityMint,
+        authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram,
+        tokenProgram,
+        rent,
+      },
+    });
   });
 
   it("Adds an exchange rate A", async () => {
@@ -176,7 +191,7 @@ describe("voting-rights", () => {
       accounts: {
         exchangeVault: exchangeVaultA,
         depositMint: mintA,
-				votingMint: votingMintA,
+        votingMint: votingMintA,
         registrar,
         authority: program.provider.wallet.publicKey,
         rent,
@@ -197,7 +212,7 @@ describe("voting-rights", () => {
       accounts: {
         exchangeVault: exchangeVaultB,
         depositMint: mintB,
-				votingMint: votingMintB,
+        votingMint: votingMintB,
         registrar,
         authority: program.provider.wallet.publicKey,
         rent,
@@ -209,11 +224,13 @@ describe("voting-rights", () => {
   });
 
   it("Initializes a voter", async () => {
-    await program.rpc.createVoter(voterBump, {
+    await program.rpc.createVoter(voterBump, voterWeightRecordBump, {
       accounts: {
         voter,
+        voterWeightRecord,
         registrar,
         authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
         systemProgram,
         associatedTokenProgram,
         tokenProgram,
@@ -238,9 +255,9 @@ describe("voting-rights", () => {
           depositMint: mintA,
           votingMint: votingMintA,
           tokenProgram,
-					systemProgram,
-					associatedTokenProgram,
-					rent,
+          systemProgram,
+          associatedTokenProgram,
+          rent,
         },
       },
     });
@@ -300,9 +317,9 @@ describe("voting-rights", () => {
           depositMint: mintA,
           votingMint: votingMintA,
           tokenProgram,
-					systemProgram,
-					associatedTokenProgram,
-					rent,
+          systemProgram,
+          associatedTokenProgram,
+          rent,
         },
       },
     });
@@ -312,5 +329,17 @@ describe("voting-rights", () => {
     assert.ok(deposit.isUsed);
     assert.ok(deposit.amountDeposited.toNumber() === 10);
     assert.ok(deposit.rateIdx === 0);
+  });
+
+  it("Updates a vote weight record", async () => {
+    await program.rpc.updateVoterWeightRecord({
+      accounts: {
+        registrar,
+        voter,
+        voterWeightRecord,
+        authority: program.provider.wallet.publicKey,
+        systemProgram,
+      },
+    });
   });
 });

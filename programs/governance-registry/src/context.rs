@@ -4,6 +4,8 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::mem::size_of;
 
+pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
+
 #[derive(Accounts)]
 #[instruction(warmup_secs: i64, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
@@ -15,7 +17,10 @@ pub struct CreateRegistrar<'info> {
         space = 8 + size_of::<Registrar>()
     )]
     pub registrar: AccountLoader<'info, Registrar>,
+    // Unsafe and untrusted. This instruction needs to be invoked immediatley
+    // after the realm is created.
     pub realm: UncheckedAccount<'info>,
+    pub realm_community_mint: Account<'info, Mint>,
     pub authority: UncheckedAccount<'info>,
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -24,7 +29,7 @@ pub struct CreateRegistrar<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(voter_bump: u8)]
+#[instruction(voter_bump: u8, voter_weight_record_bump: u8)]
 pub struct CreateVoter<'info> {
     #[account(
         init,
@@ -34,8 +39,17 @@ pub struct CreateVoter<'info> {
         space = 8 + size_of::<Voter>(),
     )]
     pub voter: AccountLoader<'info, Voter>,
+    #[account(
+				init
+,				seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+				bump = voter_weight_record_bump,
+				payer = payer,
+				space = 150,
+		)]
+    pub voter_weight_record: Account<'info, VoterWeightRecord>,
     pub registrar: AccountLoader<'info, Registrar>,
     pub authority: Signer<'info>,
+    pub payer: Signer<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -237,9 +251,9 @@ pub struct UpdateSchedule<'info> {
 }
 
 #[derive(Accounts)]
-pub struct DecayVotingPower<'info> {
+pub struct UpdateVoterWeightRecord<'info> {
     #[account(
-        seeds = [vote_weight_record.realm.as_ref()],
+        seeds = [voter_weight_record.realm.as_ref()],
         bump = registrar.load()?.bump,
     )]
     pub registrar: AccountLoader<'info, Registrar>,
@@ -249,11 +263,15 @@ pub struct DecayVotingPower<'info> {
     )]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
-        mut,
-        constraint = vote_weight_record.governing_token_owner == voter.load()?.authority,
+				mut,
+				seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+				bump = voter.load()?.voter_weight_record_bump,
+				constraint = voter_weight_record.realm == registrar.load()?.realm,
+        constraint = voter_weight_record.governing_token_owner == voter.load()?.authority,
     )]
-    pub vote_weight_record: Account<'info, VoterWeightRecord>,
+    pub voter_weight_record: Account<'info, VoterWeightRecord>,
     pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
