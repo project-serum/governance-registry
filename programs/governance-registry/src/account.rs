@@ -39,10 +39,11 @@ pub struct Voter {
 
 impl Voter {
     pub fn weight(&self) -> Result<u64> {
+        let curr_ts = Clock::get()?.unix_timestamp;
         self.deposits
             .iter()
             .filter(|d| d.is_used)
-            .try_fold(0, |sum, d| d.voting_power().map(|vp| sum + vp))
+            .try_fold(0, |sum, d| d.voting_power(curr_ts).map(|vp| sum + vp))
     }
 }
 
@@ -173,23 +174,19 @@ impl DepositEntry {
     /// lockup calculation doesn't start until a specific date, so that
     /// the voting power of all new depositors remains zero for an initial
     /// period of time, say, two weeks.
-    pub fn voting_power(&self) -> Result<u64> {
-        let curr_ts = Clock::get()?.unix_timestamp;
-
-        // Voting power is zero until the warmup period ends.
+    pub fn voting_power(&self, curr_ts: i64) -> Result<u64> {
         if curr_ts < self.lockup.start_ts {
             return Ok(0);
         }
-
         match self.lockup.kind {
-            LockupKind::Daily => self.voting_power_daily(),
-            LockupKind::Cliff => self.voting_power_cliff(),
+            LockupKind::Daily => self.voting_power_daily(curr_ts),
+            LockupKind::Cliff => self.voting_power_cliff(curr_ts),
         }
     }
 
-    fn voting_power_daily(&self) -> Result<u64> {
+    fn voting_power_daily(&self, curr_ts: i64) -> Result<u64> {
         let m = MAX_DAYS_LOCKED;
-        let n = self.lockup.days_left()?;
+        let n = self.lockup.days_left(curr_ts)?;
 
         let decayed_vote_weight = self
             .amount_scaled
@@ -201,16 +198,16 @@ impl DepositEntry {
         Ok(decayed_vote_weight)
     }
 
-    fn voting_power_cliff(&self) -> Result<u64> {
-        let voting_weight = self
+    fn voting_power_cliff(&self, curr_ts: i64) -> Result<u64> {
+        let decayed_voting_weight = self
             .lockup
-            .days_left()?
+            .days_left(curr_ts)?
             .checked_mul(self.amount_scaled)
             .unwrap()
             .checked_div(MAX_DAYS_LOCKED)
             .unwrap();
 
-        Ok(voting_weight)
+        Ok(decayed_voting_weight)
     }
 
     /// Returns the amount of unlocked tokens for this deposit--in native units
@@ -221,13 +218,13 @@ impl DepositEntry {
             return Ok(0);
         }
         match self.lockup.kind {
-            LockupKind::Daily => self.vested_daily(),
+            LockupKind::Daily => self.vested_daily(curr_ts),
             LockupKind::Cliff => self.vested_cliff(),
         }
     }
 
-    fn vested_daily(&self) -> Result<u64> {
-        let day_current = self.lockup.day_current()?;
+    fn vested_daily(&self, curr_ts: i64) -> Result<u64> {
+        let day_current = self.lockup.day_current(curr_ts)?;
         let days_total = self.lockup.days_total()?;
         if day_current >= days_total {
             return Ok(self.amount_deposited);
@@ -272,25 +269,21 @@ pub struct Lockup {
 impl Lockup {
     /// Returns the number of days left on the lockup, ignoring the warmup
     /// period.
-    pub fn days_left(&self) -> Result<u64> {
-        Ok(self.days_total()?.checked_sub(self.day_current()?).unwrap())
+    pub fn days_left(&self, curr_ts: i64) -> Result<u64> {
+        Ok(self
+            .days_total()?
+            .saturating_sub(self.day_current(curr_ts)?))
     }
 
     /// Returns the current day in the vesting schedule. The warmup period is
     /// treated as day zero.
-    pub fn day_current(&self) -> Result<u64> {
-        let curr_ts = Clock::get()?.unix_timestamp;
-
-        // Warmup period hasn't ended.
-        if curr_ts < self.start_ts {
-            return Ok(0);
-        }
-
-        u64::try_from({
-            let secs_elapsed = curr_ts.checked_sub(self.start_ts).unwrap();
+    pub fn day_current(&self, curr_ts: i64) -> Result<u64> {
+        let d = u64::try_from({
+            let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
             secs_elapsed.checked_div(SECS_PER_DAY).unwrap()
         })
-        .map_err(|_| ErrorCode::UnableToConvert.into())
+        .map_err(|_| ErrorCode::UnableToConvert)?;
+        Ok(d)
     }
 
     /// Returns the total amount of days in the lockup period, ignoring the
@@ -312,4 +305,265 @@ impl Lockup {
 pub enum LockupKind {
     Daily,
     Cliff,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn days_left_start() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 10,
+            days_total: 10.0,
+            curr_day: 0.0,
+        })
+    }
+
+    #[test]
+    pub fn days_left_one_half() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 10,
+            days_total: 10.0,
+            curr_day: 0.5,
+        })
+    }
+
+    #[test]
+    pub fn days_left_one() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 9,
+            days_total: 10.0,
+            curr_day: 1.0,
+        })
+    }
+
+    #[test]
+    pub fn days_left_one_and_one_half() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 9,
+            days_total: 10.0,
+            curr_day: 1.5,
+        })
+    }
+
+    #[test]
+    pub fn days_left_9() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 1,
+            days_total: 10.0,
+            curr_day: 9.0,
+        })
+    }
+
+    #[test]
+    pub fn days_left_9_dot_one() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 1,
+            days_total: 10.0,
+            curr_day: 9.1,
+        })
+    }
+
+    #[test]
+    pub fn days_left_9_dot_nine() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 1,
+            days_total: 10.0,
+            curr_day: 9.1,
+        })
+    }
+
+    #[test]
+    pub fn days_left_ten() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 0,
+            days_total: 10.0,
+            curr_day: 10.0,
+        })
+    }
+
+    #[test]
+    pub fn days_left_eleven() -> Result<()> {
+        run_test_days_left(TestDaysLeft {
+            expected_days_left: 0,
+            days_total: 10.0,
+            curr_day: 11.0,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_warmup() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0,         // 0 warmup.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: -0.5,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_start() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 0.5,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_one_third_day() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 0.33,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_half_day() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 0.5,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_two_thirds_day() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 0.66,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_one_day() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 35225,     // (9/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 1.0,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_one_day_one_third() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 35225,     // (9/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 1.33,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_two_days() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 31311,     // (8/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 2.0,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_nine_dot_nine_days() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 3913,      // (1/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 9.9,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_ten_days() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 10.0,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_ten_dot_one_days() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 10.1,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_cliff_eleven_days() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 10.1,
+        })
+    }
+
+    struct TestDaysLeft {
+        expected_days_left: u64,
+        days_total: f64,
+        curr_day: f64,
+    }
+
+    struct TestVotingPower {
+        amount_deposited: u64,
+        days_total: f64,
+        curr_day: f64,
+        expected_voting_power: u64,
+    }
+
+    fn run_test_days_left(t: TestDaysLeft) -> Result<()> {
+        let start_ts = 1634929833;
+        let end_ts = start_ts + days_to_secs(t.days_total);
+        let curr_ts = start_ts + days_to_secs(t.curr_day);
+        let l = Lockup {
+            kind: LockupKind::Cliff,
+            start_ts,
+            end_ts,
+            padding: [0u8; 16],
+        };
+        let days_left = l.days_left(curr_ts)?;
+        assert_eq!(days_left, t.expected_days_left);
+        Ok(())
+    }
+
+    fn run_test_voting_power(t: TestVotingPower) -> Result<()> {
+        let start_ts = 1634929833;
+        let end_ts = start_ts + days_to_secs(t.days_total);
+        let d = DepositEntry {
+            is_used: true,
+            rate_idx: 0,
+            amount_deposited: t.amount_deposited,
+            amount_withdrawn: 0,
+            amount_scaled: t.amount_deposited,
+            lockup: Lockup {
+                kind: LockupKind::Cliff,
+                start_ts,
+                end_ts,
+                padding: [0u8; 16],
+            },
+        };
+        let curr_ts = start_ts + days_to_secs(t.curr_day);
+        let power = d.voting_power(curr_ts)?;
+        assert_eq!(power, t.expected_voting_power);
+        Ok(())
+    }
+
+    fn days_to_secs(days: f64) -> i64 {
+        let d = 86_400.0 * days;
+        d.round() as i64
+    }
 }

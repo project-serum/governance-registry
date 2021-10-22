@@ -305,7 +305,8 @@ pub mod governance_registry {
         require!(d.is_used, InvalidDepositId);
 
         // The lockup period can only be increased.
-        require!(days as u64 > d.lockup.days_left()?, InvalidDays);
+        let curr_ts = Clock::get()?.unix_timestamp;
+        require!(days as u64 > d.lockup.days_left(curr_ts)?, InvalidDays);
 
         let start_ts = Clock::get()?.unix_timestamp;
         let end_ts = start_ts
