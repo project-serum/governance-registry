@@ -394,121 +394,182 @@ mod tests {
 
     #[test]
     pub fn voting_power_cliff_warmup() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 0,         // 0 warmup.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power: 0, // 0 warmup.
+            amount_deposited,
             days_total: 10.0,
             curr_day: -0.5,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_start() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (10 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 0.5,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_one_third_day() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (10 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 0.33,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_half_day() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (10 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 0.5,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_two_thirds_day() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (10 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 39138,     // (10/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 0.66,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_one_day() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (9 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 35225,     // (9/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 1.0,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_one_day_one_third() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = (9 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 35225,     // (9/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 1.33,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_two_days() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        // (8/2555) * deposit w/ 6 decimals.
+        let expected_voting_power = (8 * amount_deposited) / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 31311,     // (8/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 2.0,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_nine_dot_nine_days() -> Result<()> {
+        // 10 tokens with 6 decimals.
+        let amount_deposited = 10 * 1_000_000;
+        let expected_voting_power = amount_deposited / MAX_DAYS_LOCKED;
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 3913,      // (1/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power,
+            amount_deposited,
             days_total: 10.0,
             curr_day: 9.9,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_ten_days() -> Result<()> {
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
-            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            expected_voting_power: 0, // (0/MAX_DAYS_LOCKED) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000,
             days_total: 10.0,
             curr_day: 10.0,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_ten_dot_one_days() -> Result<()> {
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
+            expected_voting_power: 0, // (0/MAX_DAYS_LOCKED) * deposit w/ 6 decimals.
             amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
             days_total: 10.0,
             curr_day: 10.1,
+            kind: LockupKind::Cliff,
         })
     }
 
     #[test]
     pub fn voting_power_cliff_eleven_days() -> Result<()> {
         run_test_voting_power(TestVotingPower {
-            expected_voting_power: 0,         // (0/2555) * deposit w/ 6 decimals.
+            expected_voting_power: 0, // (0/MAX_DAYS_LOCKED) * deposit w/ 6 decimals.
             amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
             days_total: 10.0,
             curr_day: 10.1,
+            kind: LockupKind::Cliff,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_daily_warmup() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0, // (0/MAX_DAYS_LOCKED) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: -1.0,
+            kind: LockupKind::Daily,
+        })
+    }
+
+    #[test]
+    pub fn voting_power_daily_start() -> Result<()> {
+        run_test_voting_power(TestVotingPower {
+            expected_voting_power: 0, // (0/MAX_DAYS_LOCKED) * deposit w/ 6 decimals.
+            amount_deposited: 10 * 1_000_000, // 10 tokens with 6 decimals.
+            days_total: 10.0,
+            curr_day: 0.0,
+            kind: LockupKind::Daily,
         })
     }
 
@@ -523,6 +584,7 @@ mod tests {
         days_total: f64,
         curr_day: f64,
         expected_voting_power: u64,
+        kind: LockupKind,
     }
 
     fn run_test_days_left(t: TestDaysLeft) -> Result<()> {
@@ -550,9 +612,9 @@ mod tests {
             amount_withdrawn: 0,
             amount_scaled: t.amount_deposited,
             lockup: Lockup {
-                kind: LockupKind::Cliff,
                 start_ts,
                 end_ts,
+                kind: t.kind,
                 padding: [0u8; 16],
             },
         };
