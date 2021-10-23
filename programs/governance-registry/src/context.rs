@@ -7,7 +7,7 @@ use std::mem::size_of;
 pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
 
 #[derive(Accounts)]
-#[instruction(warmup_secs: i64, registrar_bump: u8)]
+#[instruction(warmup_secs: i64, rate_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
     #[account(
         init,
@@ -252,10 +252,6 @@ pub struct UpdateSchedule<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateVoterWeightRecord<'info> {
-    #[account(
-        seeds = [voter_weight_record.realm.as_ref()],
-        bump = registrar.load()?.bump,
-    )]
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(
         has_one = registrar,
@@ -272,6 +268,15 @@ pub struct UpdateVoterWeightRecord<'info> {
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+// Remaining accounts should all the token mints that have registered
+// exchange rates.
+#[derive(Accounts)]
+pub struct UpdateMaxVoteWeight<'info> {
+    pub registrar: AccountLoader<'info, Registrar>,
+    // TODO: SPL governance has not yet implemented this.
+    pub max_vote_weight_record: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]

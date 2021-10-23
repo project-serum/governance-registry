@@ -1,7 +1,7 @@
 use access_control::*;
 use account::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token;
+use anchor_spl::token::{self, Mint};
 use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
@@ -67,6 +67,7 @@ pub mod governance_registry {
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
         warmup_secs: i64,
+        rate_decimals: u8,
         registrar_bump: u8,
     ) -> Result<()> {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
@@ -75,6 +76,7 @@ pub mod governance_registry {
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
         registrar.warmup_secs = warmup_secs;
+        registrar.rate_decimals = rate_decimals;
 
         Ok(())
     }
@@ -184,17 +186,18 @@ pub mod governance_registry {
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
 
-        // Get the exchange rate entry associated with this deposit.
-        let er_idx = registrar
-            .rates
-            .iter()
-            .position(|r| r.mint == ctx.accounts.deposit_mint.key())
-            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-        let er_entry = registrar.rates[er_idx];
-
         // Calculate the amount of voting tokens to mint at the specified
         // exchange rate.
-        let amount_scaled = er_entry.rate.checked_mul(amount).unwrap();
+        let amount_scaled = {
+            // Get the exchange rate entry associated with this deposit.
+            let er_idx = registrar
+                .rates
+                .iter()
+                .position(|r| r.mint == ctx.accounts.deposit_mint.key())
+                .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+            let er_entry = registrar.rates[er_idx];
+            registrar.convert(&er_entry, amount)?
+        };
 
         require!(voter.deposits.len() > id as usize, InvalidDepositId);
         let d_entry = &mut voter.deposits[id as usize];
@@ -218,7 +221,7 @@ pub mod governance_registry {
             ctx.accounts
                 .mint_to_ctx()
                 .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-            amount_scaled,
+            amount,
         )?;
 
         // Freeze the vote tokens; they are just used for UIs + accounting.
@@ -259,7 +262,7 @@ pub mod governance_registry {
                 .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
                 .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
             let er_entry = registrar.rates[er_idx];
-            er_entry.rate * amount
+            registrar.convert(&er_entry, amount)?
         };
 
         // Update deposit book keeping.
@@ -331,6 +334,43 @@ pub mod governance_registry {
         record.voter_weight = voter.weight()?;
         record.voter_weight_expiry = Some(Clock::get()?.slot);
 
+        Ok(())
+    }
+
+    /// Calculates the max vote weight for the registry. This is a function
+    /// of the total supply of all exchange rate mints, converted into a
+    /// common currency with a common number of decimals.
+    ///
+    /// Note that this method is only safe to use if the cumulative supply for
+    /// all tokens fits into a u64 *after* converting into common decimals, as
+    /// defined by the registrar's `rate_decimal` field.
+    pub fn update_max_vote_weight<'info>(
+        ctx: Context<'_, '_, '_, 'info, UpdateMaxVoteWeight<'info>>,
+    ) -> Result<()> {
+        let registrar = ctx.accounts.registrar.load()?;
+        let _max_vote_weight = {
+            let total: Result<u64> = ctx
+                .remaining_accounts
+                .iter()
+                .map(|acc| Account::<Mint>::try_from(acc))
+                .collect::<std::result::Result<Vec<Account<Mint>>, ProgramError>>()?
+                .iter()
+                .try_fold(0u64, |sum, m| {
+                    let er_idx = registrar
+                        .rates
+                        .iter()
+                        .position(|r| r.mint == m.key())
+                        .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+                    let er_entry = registrar.rates[er_idx];
+                    let amount = registrar.convert(&er_entry, m.supply)?;
+                    let total = sum.checked_add(amount).unwrap();
+                    Ok(total)
+                });
+            total?
+        };
+        // TODO: SPL governance has not yet implemented this feature.
+        //       When it has, probably need to write the result into an account,
+        //       similar to VoterWeightRecord.
         Ok(())
     }
 

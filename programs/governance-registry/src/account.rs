@@ -25,6 +25,26 @@ pub struct Registrar {
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],
+    // The decimals to use when converting deposits into a common currency.
+    pub rate_decimals: u8,
+}
+
+impl Registrar {
+    /// Converts the given amount into the common registrar currency--applying
+    /// both the exchange rate and a decimal update.
+    ///
+    /// The "common regsitrar currency" is the unit used to calculate voting
+    /// weight.
+    pub fn convert(&self, er: &ExchangeRateEntry, amount: u64) -> Result<u64> {
+        require!(self.rate_decimals >= er.decimals, InvalidDecimals);
+        let decimal_diff = self.rate_decimals.checked_sub(er.decimals).unwrap();
+        let convert = amount
+            .checked_mul(er.rate)
+            .unwrap()
+            .checked_mul(10u64.pow(decimal_diff.into()))
+            .unwrap();
+        Ok(convert)
+    }
 }
 
 /// User account for minting voting rights.
@@ -51,8 +71,11 @@ impl Voter {
 #[zero_copy]
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct ExchangeRateEntry {
+    // Mint for this entry.
     pub mint: Pubkey,
+    // Exchange rate into the common currency.
     pub rate: u64,
+    // Mint decimals.
     pub decimals: u8,
 }
 

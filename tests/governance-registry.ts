@@ -167,7 +167,7 @@ describe("voting-rights", () => {
   });
 
   it("Initializes a registrar", async () => {
-    await program.rpc.createRegistrar(new BN(0), registrarBump, {
+    await program.rpc.createRegistrar(new BN(0), 6, registrarBump, {
       accounts: {
         registrar,
         realm,

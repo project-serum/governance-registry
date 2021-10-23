@@ -30,4 +30,6 @@ pub enum ErrorCode {
     RateNotZero,
     #[msg("")]
     InvalidIndex,
+    #[msg("Exchange rate decimals cannot be larger than registrar decimals")]
+    InvalidDecimals,
 }
