@@ -40,12 +40,12 @@ pub struct CreateVoter<'info> {
     )]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
-				init
-,				seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
-				bump = voter_weight_record_bump,
-				payer = payer,
-				space = 150,
-		)]
+        init,
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+        bump = voter_weight_record_bump,
+        payer = payer,
+        space = 150,
+    )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
     pub registrar: AccountLoader<'info, Registrar>,
     pub authority: Signer<'info>,
@@ -263,10 +263,10 @@ pub struct UpdateVoterWeightRecord<'info> {
     )]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
-				mut,
-				seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
-				bump = voter.load()?.voter_weight_record_bump,
-				constraint = voter_weight_record.realm == registrar.load()?.realm,
+        mut,
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+        bump = voter.load()?.voter_weight_record_bump,
+        constraint = voter_weight_record.realm == registrar.load()?.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.authority,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
