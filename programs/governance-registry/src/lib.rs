@@ -66,7 +66,6 @@ pub mod governance_registry {
     /// per governance realm.
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
-        warmup_secs: i64,
         rate_decimals: u8,
         registrar_bump: u8,
     ) -> Result<()> {
@@ -75,7 +74,6 @@ pub mod governance_registry {
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
-        registrar.warmup_secs = warmup_secs;
         registrar.rate_decimals = rate_decimals;
 
         Ok(())
@@ -139,8 +137,8 @@ pub mod governance_registry {
             let registrar = &ctx.accounts.deposit.registrar.load()?;
             let voter = &mut ctx.accounts.deposit.voter.load_mut()?;
 
-            // Set the lockup start timestamp, delayed by the warmup period.
-            let start_ts = Clock::get()?.unix_timestamp + registrar.warmup_secs;
+            // Set the lockup start timestamp.
+            let start_ts = Clock::get()?.unix_timestamp;
 
             // Get the exchange rate entry associated with this deposit.
             let er_idx = registrar

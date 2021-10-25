@@ -7,7 +7,7 @@ use std::mem::size_of;
 pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
 
 #[derive(Accounts)]
-#[instruction(warmup_secs: i64, rate_decimals: u8, registrar_bump: u8)]
+#[instruction(rate_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
     #[account(
         init,

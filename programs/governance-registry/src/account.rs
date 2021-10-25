@@ -21,7 +21,6 @@ pub struct Registrar {
     pub authority: Pubkey,
     pub realm: Pubkey,
     pub realm_community_mint: Pubkey,
-    pub warmup_secs: i64,
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],
@@ -189,14 +188,6 @@ impl DepositEntry {
     ///
     /// To calculate the decay, we can simply re-use the above sum, adjusting
     /// `n` for the number of days left in the lockup.
-    ///
-    /// ## Voting Power Warmup
-    ///
-    /// To prevent the case where one borrows tokens to suddenly vote on a
-    /// favorable proposal, one can introduce a "warmup" period, where the
-    /// lockup calculation doesn't start until a specific date, so that
-    /// the voting power of all new depositors remains zero for an initial
-    /// period of time, say, two weeks.
     pub fn voting_power(&self, curr_ts: i64) -> Result<u64> {
         if curr_ts < self.lockup.start_ts {
             return Ok(0);
@@ -293,25 +284,23 @@ impl DepositEntry {
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct Lockup {
     pub kind: LockupKind,
-    // Start of the lockup, shifted by the warmup period.
+    // Start of the lockup.
     pub start_ts: i64,
-    // End of the lockup, shifted by the warmup period.
+    // End of the lockup.
     pub end_ts: i64,
     // Empty bytes for future upgrades.
     pub padding: [u8; 16],
 }
 
 impl Lockup {
-    /// Returns the number of days left on the lockup, ignoring the warmup
-    /// period.
+    /// Returns the number of days left on the lockup.
     pub fn days_left(&self, curr_ts: i64) -> Result<u64> {
         Ok(self
             .days_total()?
             .saturating_sub(self.day_current(curr_ts)?))
     }
 
-    /// Returns the current day in the vesting schedule. The warmup period is
-    /// treated as day zero.
+    /// Returns the current day in the vesting schedule.
     pub fn day_current(&self, curr_ts: i64) -> Result<u64> {
         let d = u64::try_from({
             let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
@@ -321,8 +310,7 @@ impl Lockup {
         Ok(d)
     }
 
-    /// Returns the total amount of days in the lockup period, ignoring the
-    /// warmup period.
+    /// Returns the total amount of days in the lockup period.
     pub fn days_total(&self) -> Result<u64> {
         // Number of seconds in the entire lockup.
         let lockup_secs = self.end_ts.checked_sub(self.start_ts).unwrap();
