@@ -4,7 +4,7 @@ rust:
   - stable
 env:
   global:
-    - NODE_VERSION="v14.7.0"
+    - NODE_VERSION="v17.0.1"
     - SOLANA_VERSION="v1.8.0"
 
 _defaults: &defaults
