@@ -57,7 +57,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 /// exchange rate, which must be fixed.
 ///
 /// Note that the above also implies that the `max_vote_weight` must fit into
-/// a u64.
+/// a u64. Assuming all tokens are using 6 decimals with a 10B supply,
+/// that's ~1844 mints that can be used for voting.
 #[program]
 pub mod governance_registry {
     use super::*;
@@ -174,6 +175,35 @@ pub mod governance_registry {
         let update_ctx = Context::new(ctx.program_id, &mut ctx.accounts.deposit, &[]);
         update_deposit(update_ctx, deposit_id, amount)?;
 
+        Ok(())
+    }
+
+    /// Creates an auth account which allows the associated program to be used
+    /// as a source of deposits.
+    pub fn create_auth_external(ctx: Context<CreateAuthExternal>) -> Result<()> {
+        // TODO.
+        Ok(())
+    }
+
+    /// Revokes the auth account so that the associated program can no longer be
+    /// used as a source of deposits.
+    pub fn revoke_auth_external(ctx: Context<RevokeAuthExternal>) -> Result<()> {
+        // TODO.
+        Ok(())
+    }
+
+    /// Creates a new deposit entry using an external, trusted compensation
+    /// program, which holds and stores the locked tokens.
+    pub fn create_deposit_external(ctx: Context<CreateDepositExternal>) -> Result<()> {
+        // TODO.
+        Ok(())
+    }
+
+    /// Updates a deposit entry using an external, trusted compensation program.
+    /// This method should be called by a crank whenever an account in the
+    /// external compensation program changes.
+    pub fn update_deposit_external(ctx: Context<UpdateDepositExternal>) -> Result<()> {
+        // TODO.
         Ok(())
     }
 

@@ -92,6 +92,25 @@ pub struct CreateDeposit<'info> {
     pub deposit: UpdateDeposit<'info>,
 }
 
+// TODO.
+#[derive(Accounts)]
+pub struct CreateAuthExternal {}
+
+// TODO.
+#[derive(Accounts)]
+pub struct RevokeAuthExternal {}
+
+// TODO: Initialize an "auth account" which is used to ensure this instruction
+//       can only be called once. If called more than once, the account
+//       will already exist and so it will fail to init the account.
+//       This will allow us to use accounts from external programs.
+#[derive(Accounts)]
+pub struct CreateDepositExternal {}
+
+// TODO.
+#[derive(Accounts)]
+pub struct UpdateDepositExternal {}
+
 #[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
