@@ -180,8 +180,9 @@ pub mod governance_registry {
 
     /// Creates an auth account which allows the associated program to be used
     /// as a source of deposits.
-    pub fn create_auth_external(ctx: Context<CreateAuthExternal>) -> Result<()> {
-        // TODO.
+    pub fn create_auth_external(ctx: Context<CreateAuthExternal>, bump: u8) -> Result<()> {
+        let auth = &mut ctx.accounts.auth;
+        auth.bump = bump;
         Ok(())
     }
 

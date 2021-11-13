@@ -342,6 +342,7 @@ pub struct Auth {
     granted_ts: i64,
     revoked_ts: i64,
     revoked: bool,
+    bump: u8,
 }
 
 #[cfg(test)]

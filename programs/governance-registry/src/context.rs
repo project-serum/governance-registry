@@ -92,9 +92,14 @@ pub struct CreateDeposit<'info> {
     pub deposit: UpdateDeposit<'info>,
 }
 
-// TODO.
 #[derive(Accounts)]
-pub struct CreateAuthExternal {}
+#[instruction(bump: u8)]
+pub struct CreateAuthExternal<'info> {
+    #[account(init, seeds = [], bump = bump)]
+    pub auth: Account<'info, Auth>,
+    #[account(executable)]
+    pub external_program: UncheckedAccount<'info>,
+}
 
 // TODO.
 #[derive(Accounts)]
