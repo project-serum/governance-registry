@@ -93,6 +93,30 @@ pub struct CreateDeposit<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct CreateAuthExternal<'info> {
+    #[account(init, seeds = [], bump = bump)]
+    pub auth: Account<'info, Auth>,
+    #[account(executable)]
+    pub external_program: UncheckedAccount<'info>,
+}
+
+// TODO.
+#[derive(Accounts)]
+pub struct RevokeAuthExternal {}
+
+// TODO: Initialize an "auth account" which is used to ensure this instruction
+//       can only be called once. If called more than once, the account
+//       will already exist and so it will fail to init the account.
+//       This will allow us to use accounts from external programs.
+#[derive(Accounts)]
+pub struct CreateDepositExternal {}
+
+// TODO.
+#[derive(Accounts)]
+pub struct UpdateDepositExternal {}
+
+#[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = authority, has_one = registrar)]

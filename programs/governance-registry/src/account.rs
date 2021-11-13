@@ -26,6 +26,8 @@ pub struct Registrar {
     pub rates: [ExchangeRateEntry; 2],
     // The decimals to use when converting deposits into a common currency.
     pub rate_decimals: u8,
+    // Empty bytes for future upgrades.
+    pub padding: [u8; 1024],
 }
 
 impl Registrar {
@@ -35,6 +37,9 @@ impl Registrar {
     /// The "common regsitrar currency" is the unit used to calculate voting
     /// weight.
     pub fn convert(&self, er: &ExchangeRateEntry, amount: u64) -> Result<u64> {
+        // TODO: Truncate the amount if the exchange rate decimals are greater
+        //       than the common currency decimals.
+        //
         require!(self.rate_decimals >= er.decimals, InvalidDecimals);
         let decimal_diff = self.rate_decimals.checked_sub(er.decimals).unwrap();
         let convert = amount
@@ -328,6 +333,16 @@ impl Lockup {
 pub enum LockupKind {
     Daily,
     Cliff,
+}
+
+/// Auth account. The existance of this account means the registrar authority
+/// approved some action.
+#[account]
+pub struct Auth {
+    granted_ts: i64,
+    revoked_ts: i64,
+    revoked: bool,
+    bump: u8,
 }
 
 #[cfg(test)]
