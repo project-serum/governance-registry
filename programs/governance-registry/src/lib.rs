@@ -237,6 +237,10 @@ pub mod governance_registry {
     ///
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
+        // TODO: Must cross-reference deposit_id with accounts, currently security bug
+        // TODO: Must check TokenOwnerRecord to see if withdraws are allowed
+        // TODO: Must prevent deposit / revise / withdraw / vote in one tx
+
         // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
