@@ -10,15 +10,22 @@ use std::convert::TryFrom;
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
-/// for localnet, to make testing of vesting possible,
-/// set a low value so tests can just sleep for 10s to simulate a day
 #[cfg(feature = "localnet")]
 pub const SECS_PER_DAY: i64 = 10;
 #[cfg(not(feature = "localnet"))]
 pub const SECS_PER_DAY: i64 = 86_400;
 
+/// Seconds in one month.
+#[cfg(feature = "localnet")]
+pub const SECS_PER_MONTH: i64 = 10;
+#[cfg(not(feature = "localnet"))]
+pub const SECS_PER_MONTH: i64 = 86_400 * 30;
+
 /// Maximum number of days one can lock for.
 pub const MAX_DAYS_LOCKED: u64 = 2555;
+
+/// Maximum number of months one can lock for.
+pub const MAX_MONTHS_LOCKED: u64 = 2555;
 
 /// Instance of a voting rights distributor.
 #[account(zero_copy)]
@@ -199,6 +206,7 @@ impl DepositEntry {
         }
         match self.lockup.kind {
             LockupKind::Daily => self.voting_power_daily(curr_ts),
+            LockupKind::Monthly => self.voting_power_monthly(curr_ts),
             LockupKind::Cliff => self.voting_power_cliff(curr_ts),
         }
     }
@@ -206,6 +214,32 @@ impl DepositEntry {
     fn voting_power_daily(&self, curr_ts: i64) -> Result<u64> {
         let m = MAX_DAYS_LOCKED;
         let n = self.lockup.days_left(curr_ts)?;
+
+        if n == 0 {
+            return Ok(0);
+        }
+
+        let decayed_vote_weight = self
+            .amount_scaled
+            .checked_mul(
+                // Ok to divide by two here because, if n is zero, then the
+                // voting power is zero. And if n is one or above, then the
+                // numerator is 2 or above.
+                n.checked_mul(n.checked_add(1).unwrap())
+                    .unwrap()
+                    .checked_div(2)
+                    .unwrap(),
+            )
+            .unwrap()
+            .checked_div(m.checked_mul(n).unwrap()) //.checked_mul(2).unwrap())
+            .unwrap();
+
+        Ok(decayed_vote_weight)
+    }
+
+    fn voting_power_monthly(&self, curr_ts: i64) -> Result<u64> {
+        let m = MAX_MONTHS_LOCKED;
+        let n = self.lockup.months_left(curr_ts)?;
 
         if n == 0 {
             return Ok(0);
@@ -250,6 +284,7 @@ impl DepositEntry {
         }
         match self.lockup.kind {
             LockupKind::Daily => self.vested_daily(curr_ts),
+            LockupKind::Monthly => self.vested_monthly(curr_ts),
             LockupKind::Cliff => self.vested_cliff(),
         }
     }
@@ -265,6 +300,21 @@ impl DepositEntry {
             .checked_mul(day_current)
             .unwrap()
             .checked_div(days_total)
+            .unwrap();
+        Ok(vested)
+    }
+
+    fn vested_monthly(&self, curr_ts: i64) -> Result<u64> {
+        let month_current = self.lockup.month_current(curr_ts)?;
+        let months_total = self.lockup.months_total()?;
+        if month_current >= months_total {
+            return Ok(self.amount_deposited);
+        }
+        let vested = self
+            .amount_deposited
+            .checked_mul(month_current)
+            .unwrap()
+            .checked_div(months_total)
             .unwrap();
         Ok(vested)
     }
@@ -326,12 +376,43 @@ impl Lockup {
 
         Ok(lockup_days)
     }
+
+    /// Returns the number of months left on the lockup.
+    pub fn months_left(&self, curr_ts: i64) -> Result<u64> {
+        Ok(self
+            .months_total()?
+            .saturating_sub(self.month_current(curr_ts)?))
+    }
+
+    /// Returns the current month in the vesting schedule.
+    pub fn month_current(&self, curr_ts: i64) -> Result<u64> {
+        let d = u64::try_from({
+            let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
+            secs_elapsed.checked_div(SECS_PER_MONTH).unwrap()
+        })
+        .map_err(|_| ErrorCode::UnableToConvert)?;
+        Ok(d)
+    }
+
+    /// Returns the total amount of months in the lockup period.
+    pub fn months_total(&self) -> Result<u64> {
+        // Number of seconds in the entire lockup.
+        let lockup_secs = self.end_ts.checked_sub(self.start_ts).unwrap();
+        require!(lockup_secs % SECS_PER_MONTH == 0, InvalidLockupPeriod);
+
+        // Total months in the entire lockup.
+        let lockup_months =
+            u64::try_from(lockup_secs.checked_div(SECS_PER_MONTH).unwrap()).unwrap();
+
+        Ok(lockup_months)
+    }
 }
 
 #[repr(u8)]
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
 pub enum LockupKind {
     Daily,
+    Monthly,
     Cliff,
 }
 
@@ -398,7 +479,7 @@ mod tests {
         run_test_days_left(TestDaysLeft {
             expected_days_left: 1,
             days_total: 10.0,
-            curr_day: 9.1,
+            curr_day: 9.9,
         })
     }
 
@@ -417,6 +498,51 @@ mod tests {
             expected_days_left: 0,
             days_total: 10.0,
             curr_day: 11.0,
+        })
+    }
+
+    #[test]
+    pub fn months_left_start() -> Result<()> {
+        run_test_months_left(TestMonthsLeft {
+            expected_months_left: 10,
+            months_total: 10.0,
+            curr_month: 0.,
+        })
+    }
+
+    #[test]
+    pub fn months_left_one_half() -> Result<()> {
+        run_test_months_left(TestMonthsLeft {
+            expected_months_left: 10,
+            months_total: 10.0,
+            curr_month: 0.5,
+        })
+    }
+
+    #[test]
+    pub fn months_left_one_and_a_half() -> Result<()> {
+        run_test_months_left(TestMonthsLeft {
+            expected_months_left: 9,
+            months_total: 10.0,
+            curr_month: 1.5,
+        })
+    }
+
+    #[test]
+    pub fn months_left_ten() -> Result<()> {
+        run_test_months_left(TestMonthsLeft {
+            expected_months_left: 9,
+            months_total: 10.0,
+            curr_month: 1.5,
+        })
+    }
+
+    #[test]
+    pub fn months_left_eleven() -> Result<()> {
+        run_test_months_left(TestMonthsLeft {
+            expected_months_left: 0,
+            months_total: 10.0,
+            curr_month: 11.,
         })
     }
 
@@ -736,6 +862,12 @@ mod tests {
         curr_day: f64,
     }
 
+    struct TestMonthsLeft {
+        expected_months_left: u64,
+        months_total: f64,
+        curr_month: f64,
+    }
+
     struct TestVotingPower {
         amount_deposited: u64,
         days_total: f64,
@@ -756,6 +888,21 @@ mod tests {
         };
         let days_left = l.days_left(curr_ts)?;
         assert_eq!(days_left, t.expected_days_left);
+        Ok(())
+    }
+
+    fn run_test_months_left(t: TestMonthsLeft) -> Result<()> {
+        let start_ts = 1634929833;
+        let end_ts = start_ts + months_to_secs(t.months_total);
+        let curr_ts = start_ts + months_to_secs(t.curr_month);
+        let l = Lockup {
+            kind: LockupKind::Monthly,
+            start_ts,
+            end_ts,
+            padding: [0u8; 16],
+        };
+        let months_left = l.months_left(curr_ts)?;
+        assert_eq!(months_left, t.expected_months_left);
         Ok(())
     }
 
@@ -782,7 +929,12 @@ mod tests {
     }
 
     fn days_to_secs(days: f64) -> i64 {
-        let d = 86_400.0 * days;
+        let d = 86_400. * days;
+        d.round() as i64
+    }
+
+    fn months_to_secs(months: f64) -> i64 {
+        let d = 86_400. * 30. * months;
         d.round() as i64
     }
 

@@ -358,6 +358,64 @@ describe("voting-rights", () => {
     assert.ok(vtAccount.amount.toNumber() === 0);
   });
 
+  it("Deposits monthly locked A tokens", async () => {
+    const amount = new BN(10);
+    const kind = { monthly: {} };
+    const months = 1;
+    await program.rpc.createDeposit(kind, amount, months, {
+      accounts: {
+        deposit: {
+          voter,
+          exchangeVault: exchangeVaultA,
+          depositToken: godA,
+          votingToken,
+          authority: program.provider.wallet.publicKey,
+          registrar,
+          depositMint: mintA,
+          votingMint: votingMintA,
+          tokenProgram,
+          systemProgram,
+          associatedTokenProgram,
+          rent,
+        },
+      },
+    });
+
+    const voterAccount = await program.account.voter.fetch(voter);
+    const deposit = voterAccount.deposits[2];
+    assert.ok(deposit.isUsed);
+    assert.ok(deposit.amountDeposited.toNumber() === 10);
+    assert.ok(deposit.rateIdx === 0);
+  });
+
+  it("Withdraws monthly locked A tokens", async () => {
+    await sleep(10000);
+    const depositId = 2;
+    const amount = new BN(10);
+    await program.rpc.withdraw(depositId, amount, {
+      accounts: {
+        registrar,
+        voter,
+        exchangeVault: exchangeVaultA,
+        withdrawMint: mintA,
+        votingToken,
+        votingMint: votingMintA,
+        destination: godA,
+        authority: program.provider.wallet.publicKey,
+        tokenProgram,
+      },
+    });
+
+    const voterAccount = await program.account.voter.fetch(voter);
+    const deposit = voterAccount.deposits[0];
+    assert.ok(deposit.isUsed);
+    assert.ok(deposit.amountDeposited.toNumber() === 0);
+    assert.ok(deposit.rateIdx === 0);
+
+    const vtAccount = await votingTokenClientA.getAccountInfo(votingToken);
+    assert.ok(vtAccount.amount.toNumber() === 0);
+  });
+
   it("Updates a vote weight record", async () => {
     await program.rpc.updateVoterWeightRecord({
       accounts: {

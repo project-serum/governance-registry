@@ -249,6 +249,7 @@ pub mod governance_registry {
         // Get the deposit being withdrawn from.
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
         require!(deposit_entry.is_used, InvalidDepositId);
+        msg!("deposit_entry.vested() {:?}", deposit_entry.vested());
         require!(deposit_entry.vested()? >= amount, InsufficientVestedTokens);
         require!(
             deposit_entry.amount_left() >= amount,
