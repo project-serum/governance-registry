@@ -272,7 +272,6 @@ describe("voting-rights", () => {
     assert.ok(vtAccount.amount.toNumber() === 10);
   });
 
-  /*
   it("Withdraws cliff locked A tokens", async () => {
     const depositId = 0;
     const amount = new BN(10);
@@ -283,7 +282,7 @@ describe("voting-rights", () => {
         exchangeVault: exchangeVaultA,
         withdrawMint: mintA,
         votingToken,
-        votingMint,
+        votingMint: votingMintA,
         destination: godA,
         authority: program.provider.wallet.publicKey,
         tokenProgram,
@@ -293,13 +292,12 @@ describe("voting-rights", () => {
     const voterAccount = await program.account.voter.fetch(voter);
     const deposit = voterAccount.deposits[0];
     assert.ok(deposit.isUsed);
-    assert.ok(deposit.amount.toNumber() === 0);
+    assert.ok(deposit.amountDeposited.toNumber() === 0);
     assert.ok(deposit.rateIdx === 0);
 
-    const vtAccount = await votingTokenClient.getAccountInfo(votingToken);
+    const vtAccount = await votingTokenClientA.getAccountInfo(votingToken);
     assert.ok(vtAccount.amount.toNumber() === 0);
   });
-  */
 
   it("Deposits daily locked A tokens", async () => {
     const amount = new BN(10);
@@ -325,7 +323,7 @@ describe("voting-rights", () => {
     });
 
     const voterAccount = await program.account.voter.fetch(voter);
-    const deposit = voterAccount.deposits[0];
+    const deposit = voterAccount.deposits[1];
     assert.ok(deposit.isUsed);
     assert.ok(deposit.amountDeposited.toNumber() === 10);
     assert.ok(deposit.rateIdx === 0);
