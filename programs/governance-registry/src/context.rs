@@ -191,7 +191,7 @@ pub struct Withdraw<'info> {
     pub voting_token: Account<'info, TokenAccount>,
     #[account(
         mut,
-        seeds = [registrar.load()?.realm.as_ref(), voting_token.mint.as_ref()],
+        seeds = [registrar.key().as_ref(), withdraw_mint.key().as_ref()],
         bump,
     )]
     pub voting_mint: Account<'info, Mint>,
