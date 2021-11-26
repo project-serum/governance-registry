@@ -13,6 +13,7 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 default = []
+localnet = []
 
 [dependencies]
 anchor-lang = "0.18.0"

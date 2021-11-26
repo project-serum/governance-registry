@@ -10,6 +10,11 @@ use std::convert::TryFrom;
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
+/// for localnet, to make testing of vesting possible,
+/// set a low value so tests can just sleep for 10s to simulate a day
+#[cfg(feature = "localnet")]
+pub const SECS_PER_DAY: i64 = 10;
+#[cfg(not(feature = "localnet"))]
 pub const SECS_PER_DAY: i64 = 86_400;
 
 /// Maximum number of days one can lock for.

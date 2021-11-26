@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
-import { createMintAndVault } from "@project-serum/common";
+import { createMintAndVault, sleep } from "@project-serum/common";
 import BN from "bn.js";
 import {
   PublicKey,
@@ -273,6 +273,7 @@ describe("voting-rights", () => {
   });
 
   it("Withdraws cliff locked A tokens", async () => {
+    await sleep(10000);
     const depositId = 0;
     const amount = new BN(10);
     await program.rpc.withdraw(depositId, amount, {
@@ -327,6 +328,34 @@ describe("voting-rights", () => {
     assert.ok(deposit.isUsed);
     assert.ok(deposit.amountDeposited.toNumber() === 10);
     assert.ok(deposit.rateIdx === 0);
+  });
+
+  it("Withdraws daily locked A tokens", async () => {
+    await sleep(10000);
+    const depositId = 1;
+    const amount = new BN(10);
+    await program.rpc.withdraw(depositId, amount, {
+      accounts: {
+        registrar,
+        voter,
+        exchangeVault: exchangeVaultA,
+        withdrawMint: mintA,
+        votingToken,
+        votingMint: votingMintA,
+        destination: godA,
+        authority: program.provider.wallet.publicKey,
+        tokenProgram,
+      },
+    });
+
+    const voterAccount = await program.account.voter.fetch(voter);
+    const deposit = voterAccount.deposits[0];
+    assert.ok(deposit.isUsed);
+    assert.ok(deposit.amountDeposited.toNumber() === 0);
+    assert.ok(deposit.rateIdx === 0);
+
+    const vtAccount = await votingTokenClientA.getAccountInfo(votingToken);
+    assert.ok(vtAccount.amount.toNumber() === 0);
   });
 
   it("Updates a vote weight record", async () => {
