@@ -177,6 +177,7 @@ pub struct Withdraw<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = registrar, has_one = authority)]
     pub voter: AccountLoader<'info, Voter>,
+    pub token_owner_record: AccountInfo<'info>,
     #[account(
         mut,
         associated_token::authority = registrar,

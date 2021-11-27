@@ -5,6 +5,7 @@ use anchor_spl::token::{self, Mint};
 use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
+use spl_governance::state::token_owner_record;
 
 mod access_control;
 mod account;
@@ -239,13 +240,27 @@ pub mod governance_registry {
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
         // TODO: Must cross-reference deposit_id with accounts, currently security bug
-        // TODO: Must check TokenOwnerRecord to see if withdraws are allowed
         // TODO: Must prevent deposit / revise / withdraw / vote in one tx
 
         // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
+
+        // Governance may forbid withdraws, for example when engaged in a vote.
+        let token_owner = ctx.accounts.authority.key();
+        let token_owner_record_address_seeds =
+            token_owner_record::get_token_owner_record_address_seeds(
+                &registrar.realm,
+                &registrar.realm_community_mint,
+                &token_owner,
+            );
+        let token_owner_record_data = token_owner_record::get_token_owner_record_data_for_seeds(
+            &registrar.governance_program_id,
+            &ctx.accounts.token_owner_record.to_account_info(),
+            &token_owner_record_address_seeds,
+        )?;
+        token_owner_record_data.assert_can_withdraw_governing_tokens()?;
 
         // Get the deposit being withdrawn from.
         let deposit_entry = &mut voter.deposits[deposit_id as usize];

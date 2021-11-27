@@ -37,6 +37,7 @@ describe("voting-rights", () => {
     votingMintB: PublicKey,
     voter: PublicKey,
     voterWeightRecord: PublicKey,
+    tokenOwnerRecord: PublicKey,
     votingToken: PublicKey,
     exchangeVaultA: PublicKey,
     exchangeVaultB: PublicKey;
@@ -134,6 +135,8 @@ describe("voting-rights", () => {
     voterBump = _voterBump;
     voterWeightRecord = _voterWeightRecord;
     voterWeightRecordBump = _voterWeightRecordBump;
+    // TODO: Need to make a governance program and create a real record to be able to withdraw
+    tokenOwnerRecord = new PublicKey("TokenownerRecord111111111111111111111111111");
   });
 
   it("Creates token clients", async () => {
@@ -282,6 +285,7 @@ describe("voting-rights", () => {
       accounts: {
         registrar,
         voter,
+        tokenOwnerRecord,
         exchangeVault: exchangeVaultA,
         withdrawMint: mintA,
         votingToken,
@@ -340,6 +344,7 @@ describe("voting-rights", () => {
       accounts: {
         registrar,
         voter,
+        tokenOwnerRecord,
         exchangeVault: exchangeVaultA,
         withdrawMint: mintA,
         votingToken,
