@@ -67,6 +67,12 @@ pub struct Voter {
     pub voter_bump: u8,
     pub voter_weight_record_bump: u8,
     pub deposits: [DepositEntry; 32],
+
+    /// The most recent slot a deposit was made in.
+    ///
+    /// Would like to use solana_program::clock::Slot here, but Anchor's IDL
+    /// does not know the type.
+    pub last_deposit_slot: u64,
 }
 
 impl Voter {

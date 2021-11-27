@@ -186,6 +186,8 @@ pub mod governance_registry {
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
 
+        voter.last_deposit_slot = Clock::get()?.slot;
+
         // Calculate the amount of voting tokens to mint at the specified
         // exchange rate.
         let amount_scaled = {
@@ -240,7 +242,6 @@ pub mod governance_registry {
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
         // TODO: Must cross-reference deposit_id with accounts, currently security bug
-        // TODO: Must prevent deposit / revise / withdraw / vote in one tx
 
         // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
@@ -261,6 +262,14 @@ pub mod governance_registry {
             &token_owner_record_address_seeds,
         )?;
         token_owner_record_data.assert_can_withdraw_governing_tokens()?;
+
+        // Must not withdraw in the same slot as depositing, to prevent people
+        // depositing, having the vote weight updated, withdrawing and then
+        // voting.
+        require!(
+            voter.last_deposit_slot < Clock::get()?.slot,
+            ErrorCode::InvalidToDepositAndWithdrawInOneSlot
+        );
 
         // Get the deposit being withdrawn from.
         let deposit_entry = &mut voter.deposits[deposit_id as usize];

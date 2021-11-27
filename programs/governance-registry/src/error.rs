@@ -32,4 +32,6 @@ pub enum ErrorCode {
     InvalidIndex,
     #[msg("Exchange rate decimals cannot be larger than registrar decimals")]
     InvalidDecimals,
+    #[msg("")]
+    InvalidToDepositAndWithdrawInOneSlot,
 }
