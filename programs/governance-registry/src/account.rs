@@ -295,6 +295,10 @@ impl DepositEntry {
         if day_current >= days_total {
             return Ok(self.amount_deposited);
         }
+        // todo: amount_deposited atm is also decremented in withdraw instruction
+        // this in effect then does not take into account total amount deposited at the start
+        // ideally formula should look like this
+        // total_deposited * (day_current/days_total) - already_withdrawn
         let vested = self
             .amount_deposited
             .checked_mul(day_current)
