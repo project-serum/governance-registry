@@ -71,6 +71,7 @@ pub mod governance_registry {
     ) -> Result<()> {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
         registrar.bump = registrar_bump;
+        registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();

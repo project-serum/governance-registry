@@ -30,6 +30,7 @@ pub const MAX_MONTHS_LOCKED: u64 = 2555;
 /// Instance of a voting rights distributor.
 #[account(zero_copy)]
 pub struct Registrar {
+    pub governance_program_id: Pubkey,
     pub authority: Pubkey,
     pub realm: Pubkey,
     pub realm_community_mint: Pubkey,

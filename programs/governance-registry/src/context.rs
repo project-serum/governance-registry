@@ -17,6 +17,7 @@ pub struct CreateRegistrar<'info> {
         space = 8 + size_of::<Registrar>()
     )]
     pub registrar: AccountLoader<'info, Registrar>,
+    pub governance_program_id: AccountInfo<'info>,
     // Unsafe and untrusted. This instruction needs to be invoked immediatley
     // after the realm is created.
     pub realm: UncheckedAccount<'info>,
