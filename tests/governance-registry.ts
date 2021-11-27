@@ -273,7 +273,7 @@ describe("voting-rights", () => {
   });
 
   it("Withdraws cliff locked A tokens", async () => {
-    await sleep(10000);
+    await sleep(1.1 * 10000);
     const depositId = 0;
     const amount = new BN(10);
     await program.rpc.withdraw(depositId, amount, {
@@ -331,7 +331,7 @@ describe("voting-rights", () => {
   });
 
   it("Withdraws daily locked A tokens", async () => {
-    await sleep(10000);
+    await sleep(1.1 * 10000);
     const depositId = 1;
     const amount = new BN(10);
     await program.rpc.withdraw(depositId, amount, {
@@ -361,7 +361,7 @@ describe("voting-rights", () => {
   it("Deposits monthly locked A tokens", async () => {
     const amount = new BN(10);
     const kind = { monthly: {} };
-    const months = 1;
+    const months = 10;
     await program.rpc.createDeposit(kind, amount, months, {
       accounts: {
         deposit: {
@@ -388,10 +388,35 @@ describe("voting-rights", () => {
     assert.ok(deposit.rateIdx === 0);
   });
 
-  it("Withdraws monthly locked A tokens", async () => {
-    await sleep(10000);
+  it("Fails withdrawing more than vested monthly locked A tokens", async () => {
     const depositId = 2;
-    const amount = new BN(10);
+    await sleep(1.5 * 10000);
+    // too early to withdraw 2
+    const amount = new BN(2);
+
+    try {
+      await program.rpc.withdraw(depositId, amount, {
+        accounts: {
+          registrar,
+          voter,
+          exchangeVault: exchangeVaultA,
+          withdrawMint: mintA,
+          votingToken,
+          votingMint: votingMintA,
+          destination: godA,
+          authority: program.provider.wallet.publicKey,
+          tokenProgram,
+        },
+      });
+      assert.ok(false);
+    } catch (e) {
+      assert.ok(e.message.replace(/ /g, "") === "307:");
+    }
+  });
+
+  it("Withdraws monthly locked A tokens", async () => {
+    const depositId = 2;
+    const amount = new BN(1);
     await program.rpc.withdraw(depositId, amount, {
       accounts: {
         registrar,
@@ -407,13 +432,13 @@ describe("voting-rights", () => {
     });
 
     const voterAccount = await program.account.voter.fetch(voter);
-    const deposit = voterAccount.deposits[0];
+    const deposit = voterAccount.deposits[depositId];
     assert.ok(deposit.isUsed);
-    assert.ok(deposit.amountDeposited.toNumber() === 0);
+    assert.ok(deposit.amountDeposited.toNumber() === 9);
     assert.ok(deposit.rateIdx === 0);
 
     const vtAccount = await votingTokenClientA.getAccountInfo(votingToken);
-    assert.ok(vtAccount.amount.toNumber() === 0);
+    assert.ok(vtAccount.amount.toNumber() === 9);
   });
 
   it("Updates a vote weight record", async () => {
