@@ -34,4 +34,6 @@ pub enum ErrorCode {
     InvalidDecimals,
     #[msg("")]
     InvalidToDepositAndWithdrawInOneSlot,
+    #[msg("")]
+    ForbiddenCpi,
 }

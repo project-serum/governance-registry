@@ -17,5 +17,5 @@ localnet = []
 
 [dependencies]
 anchor-lang = "0.18.0"
-anchor-spl = "0.18.0"
+anchor-spl = { version = "0.18.0", features = ["governance"] }
 spl-governance = { git = "https://github.com/solana-labs/solana-program-library", features = ["no-entrypoint"] }

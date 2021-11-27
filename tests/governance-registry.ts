@@ -16,6 +16,10 @@ import {
 } from "@solana/spl-token";
 import { GovernanceRegistry } from "../target/types/governance_registry";
 
+const SYSVAR_INSTRUCTIONS_PUBKEY = new PublicKey(
+  "Sysvar1nstructions1111111111111111111111111"
+);
+
 describe("voting-rights", () => {
   anchor.setProvider(anchor.Provider.env());
 
@@ -240,6 +244,7 @@ describe("voting-rights", () => {
         associatedTokenProgram,
         tokenProgram,
         rent,
+        instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
       },
     });
   });

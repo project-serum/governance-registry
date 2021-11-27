@@ -106,6 +106,20 @@ pub mod governance_registry {
         voter_bump: u8,
         voter_weight_record_bump: u8,
     ) -> Result<()> {
+        // Forbid creating voter accounts from CPI. The goal is to make automation
+        // impossible that weakens some of the limitations intentionally imposed on
+        // locked tokens.
+        {
+            use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
+            let ixns = ctx.accounts.instructions.to_account_info();
+            let current_index = tx_instructions::load_current_index_checked(&ixns)? as usize;
+            let current_ixn = tx_instructions::load_instruction_at_checked(current_index, &ixns)?;
+            require!(
+                current_ixn.program_id == *ctx.program_id,
+                ErrorCode::ForbiddenCpi
+            );
+        }
+
         // Load accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_init()?;
