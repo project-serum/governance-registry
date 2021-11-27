@@ -36,4 +36,6 @@ pub enum ErrorCode {
     InvalidToDepositAndWithdrawInOneSlot,
     #[msg("")]
     ForbiddenCpi,
+    #[msg("")]
+    InvalidMint,
 }

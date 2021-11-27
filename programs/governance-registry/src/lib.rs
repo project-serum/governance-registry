@@ -255,8 +255,6 @@ pub mod governance_registry {
     ///
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
-        // TODO: Must cross-reference deposit_id with accounts, currently security bug
-
         // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
@@ -295,15 +293,17 @@ pub mod governance_registry {
             InsufficientVestedTokens
         );
 
+        // Get the exchange rate for the token being withdrawn.
+        let er_idx = registrar
+            .rates
+            .iter()
+            .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
+            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+        let er_entry = registrar.rates[er_idx];
+        require!(er_idx == deposit_entry.rate_idx as usize, ErrorCode::InvalidMint);
+
         // Scale the amount being withdrawn by the exchange rate.
         let amount_scaled = {
-            // Get the exchange rate for the token being withdrawn.
-            let er_idx = registrar
-                .rates
-                .iter()
-                .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
-                .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-            let er_entry = registrar.rates[er_idx];
             registrar.convert(&er_entry, amount)?
         };
 
