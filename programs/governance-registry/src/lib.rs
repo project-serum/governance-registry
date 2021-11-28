@@ -8,7 +8,7 @@ use spl_governance::addins::voter_weight::VoterWeightAccountType;
 use spl_governance::state::token_owner_record;
 
 mod access_control;
-mod account;
+pub mod account;
 mod context;
 mod error;
 
@@ -300,12 +300,13 @@ pub mod governance_registry {
             .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
             .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
         let er_entry = registrar.rates[er_idx];
-        require!(er_idx == deposit_entry.rate_idx as usize, ErrorCode::InvalidMint);
+        require!(
+            er_idx == deposit_entry.rate_idx as usize,
+            ErrorCode::InvalidMint
+        );
 
         // Scale the amount being withdrawn by the exchange rate.
-        let amount_scaled = {
-            registrar.convert(&er_entry, amount)?
-        };
+        let amount_scaled = { registrar.convert(&er_entry, amount)? };
 
         // Update deposit book keeping.
         deposit_entry.amount_scaled -= amount_scaled;

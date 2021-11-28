@@ -24,6 +24,7 @@ pub struct CreateRegistrar<'info> {
     pub realm: UncheckedAccount<'info>,
     pub realm_community_mint: Account<'info, Mint>,
     pub authority: UncheckedAccount<'info>,
+    #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -50,8 +51,13 @@ pub struct CreateVoter<'info> {
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
     pub registrar: AccountLoader<'info, Registrar>,
+
+    // TODO: Why is authority and payer different? Is it necessary that Voter and VoterWeightRecord are paid for differently?
+    #[account(mut)]
     pub authority: Signer<'info>,
+    #[account(mut)]
     pub payer: Signer<'info>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -65,7 +71,7 @@ pub struct CreateVoter<'info> {
 pub struct CreateExchangeRate<'info> {
     #[account(
         init,
-        payer = authority,
+        payer = payer,
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
@@ -74,7 +80,7 @@ pub struct CreateExchangeRate<'info> {
         init,
         seeds = [registrar.key().as_ref(), deposit_mint.key().as_ref()],
         bump,
-        payer = authority,
+        payer = payer,
         mint::authority = registrar,
         mint::freeze_authority = registrar,
         mint::decimals = deposit_mint.decimals,
@@ -85,6 +91,8 @@ pub struct CreateExchangeRate<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut)]
     pub authority: Signer<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -119,6 +127,7 @@ pub struct UpdateDeposit<'info> {
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
+    #[account(mut)]
     pub authority: Signer<'info>,
     pub deposit_mint: Account<'info, Mint>,
     #[account(

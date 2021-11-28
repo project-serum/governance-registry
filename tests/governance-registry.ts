@@ -203,6 +203,7 @@ describe("voting-rights", () => {
         votingMint: votingMintA,
         registrar,
         authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
         rent,
         tokenProgram,
         associatedTokenProgram,
@@ -224,6 +225,7 @@ describe("voting-rights", () => {
         votingMint: votingMintB,
         registrar,
         authority: program.provider.wallet.publicKey,
+        payer: program.provider.wallet.publicKey,
         rent,
         tokenProgram,
         associatedTokenProgram,
@@ -411,6 +413,7 @@ describe("voting-rights", () => {
         accounts: {
           registrar,
           voter,
+          tokenOwnerRecord,
           exchangeVault: exchangeVaultA,
           withdrawMint: mintA,
           votingToken,
@@ -433,6 +436,7 @@ describe("voting-rights", () => {
       accounts: {
         registrar,
         voter,
+        tokenOwnerRecord,
         exchangeVault: exchangeVaultA,
         withdrawMint: mintA,
         votingToken,
