@@ -31,6 +31,7 @@ pub struct ExchangeRateCookie {
 pub struct VoterCookie {
     pub address: Pubkey,
     pub authority: Pubkey,
+    pub voter_weight_record: Pubkey,
 }
 
 impl AddinCookie {
@@ -216,6 +217,7 @@ impl AddinCookie {
         VoterCookie {
             address: voter,
             authority: authority.pubkey(),
+            voter_weight_record,
         }
     }
 
@@ -253,6 +255,54 @@ impl AddinCookie {
                     system_program: solana_sdk::system_program::id(),
                     rent: solana_program::sysvar::rent::id(),
                 },
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await
+    }
+
+    pub async fn update_deposit(
+        &self,
+        registrar: &RegistrarCookie,
+        voter: &VoterCookie,
+        exchange_rate: &ExchangeRateCookie,
+        authority: &Keypair,
+        token_address: Pubkey,
+        id: u8,
+        amount: u64,
+    ) -> std::result::Result<(), TransportError> {
+        let data =
+            anchor_lang::InstructionData::data(&governance_registry::instruction::UpdateDeposit {
+                id,
+                amount,
+            });
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &governance_registry::accounts::UpdateDeposit {
+                registrar: registrar.address,
+                voter: voter.address,
+                exchange_vault: exchange_rate.exchange_vault,
+                deposit_token: token_address,
+                voting_token: voter.voting_token(exchange_rate),
+                authority: authority.pubkey(),
+                deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
+                voting_mint: exchange_rate.voting_mint,
+                token_program: spl_token::id(),
+                associated_token_program: spl_associated_token_account::id(),
+                system_program: solana_sdk::system_program::id(),
+                rent: solana_program::sysvar::rent::id(),
             },
             None,
         );
@@ -316,6 +366,48 @@ impl AddinCookie {
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
             .await
+    }
+
+    pub async fn update_voter_weight_record(
+        &self,
+        registrar: &RegistrarCookie,
+        voter: &VoterCookie,
+        authority: &Keypair,
+    ) -> std::result::Result<governance_registry::account::VoterWeightRecord, TransportError> {
+        let data = anchor_lang::InstructionData::data(
+            &governance_registry::instruction::UpdateVoterWeightRecord {},
+        );
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &governance_registry::accounts::UpdateVoterWeightRecord {
+                registrar: registrar.address,
+                voter: voter.address,
+                voter_weight_record: voter.voter_weight_record,
+                authority: authority.pubkey(),
+                system_program: solana_sdk::system_program::id(),
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await?;
+
+        Ok(self
+            .solana
+            .get_account::<governance_registry::account::VoterWeightRecord>(
+                voter.voter_weight_record,
+            )
+            .await)
     }
 }
 
