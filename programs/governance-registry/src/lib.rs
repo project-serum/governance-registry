@@ -6,6 +6,7 @@ use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
 use spl_governance::state::token_owner_record;
+use std::convert::TryFrom;
 
 mod access_control;
 pub mod account;
@@ -76,7 +77,7 @@ pub mod governance_registry {
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
-        registrar.rate_decimals = rate_decimals;
+        registrar.common_decimals = rate_decimals;
 
         Ok(())
     }
@@ -91,11 +92,13 @@ pub mod governance_registry {
     pub fn create_exchange_rate(
         ctx: Context<CreateExchangeRate>,
         idx: u16,
-        er: ExchangeRateEntry,
+        mint: Pubkey,
+        rate: u64,
+        decimals: u8,
     ) -> Result<()> {
-        require!(er.rate > 0, InvalidRate);
+        require!(rate > 0, InvalidRate);
         let registrar = &mut ctx.accounts.registrar.load_mut()?;
-        registrar.rates[idx as usize] = er;
+        registrar.rates[idx as usize] = registrar.new_rate(mint, rate, decimals)?;
         Ok(())
     }
 
@@ -173,7 +176,8 @@ pub mod governance_registry {
             d_entry.is_used = true;
             d_entry.rate_idx = free_entry_idx as u8;
             d_entry.rate_idx = er_idx as u8;
-            d_entry.amount_withdrawn = 0;
+            d_entry.amount_deposited_native = 0;
+            d_entry.amount_initially_locked_native = 0;
             d_entry.lockup = Lockup {
                 kind,
                 start_ts,
@@ -202,26 +206,39 @@ pub mod governance_registry {
 
         voter.last_deposit_slot = Clock::get()?.slot;
 
-        // Calculate the amount of voting tokens to mint at the specified
-        // exchange rate.
-        let amount_scaled = {
-            // Get the exchange rate entry associated with this deposit.
-            let er_idx = registrar
-                .rates
-                .iter()
-                .position(|r| r.mint == ctx.accounts.deposit_mint.key())
-                .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-            let er_entry = registrar.rates[er_idx];
-            registrar.convert(&er_entry, amount)?
-        };
+        // Get the exchange rate entry associated with this deposit.
+        let er_idx = registrar
+            .rates
+            .iter()
+            .position(|r| r.mint == ctx.accounts.deposit_mint.key())
+            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+        let _er_entry = registrar.rates[er_idx];
 
         require!(voter.deposits.len() > id as usize, InvalidDepositId);
         let d_entry = &mut voter.deposits[id as usize];
-        d_entry.amount_deposited += amount;
-        d_entry.amount_scaled += amount_scaled;
 
         // Deposit tokens into the registrar.
         token::transfer(ctx.accounts.transfer_ctx(), amount)?;
+        d_entry.amount_deposited_native += amount;
+
+        // Adding funds to a lockup that is already in progress can be complicated
+        // for linear vesting schedules because all added funds should be paid out
+        // gradually over the remaining lockup duration.
+        // The logic used is to wrap up the current lockup, and create a new one
+        // for the expected remainder duration.
+        d_entry.amount_initially_locked_native -= d_entry.vested()?;
+        d_entry.amount_initially_locked_native += amount;
+        let curr_ts = Clock::get()?.unix_timestamp;
+        d_entry.lockup.start_ts = d_entry
+            .lockup
+            .start_ts
+            .checked_add(
+                i64::try_from(d_entry.lockup.day_current(curr_ts)?)
+                    .unwrap()
+                    .checked_mul(SECS_PER_DAY)
+                    .unwrap(),
+            )
+            .unwrap();
 
         // Thaw the account if it's frozen, so that we can mint.
         if ctx.accounts.voting_token.is_frozen() {
@@ -287,9 +304,13 @@ pub mod governance_registry {
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
         require!(deposit_entry.is_used, InvalidDepositId);
         msg!("deposit_entry.vested() {:?}", deposit_entry.vested());
-        require!(deposit_entry.vested()? >= amount, InsufficientVestedTokens);
         require!(
-            deposit_entry.amount_left() >= amount,
+            deposit_entry.amount_withdrawable() >= amount,
+            InsufficientVestedTokens
+        );
+        // technically unnecessary
+        require!(
+            deposit_entry.amount_deposited_native >= amount,
             InsufficientVestedTokens
         );
 
@@ -299,19 +320,14 @@ pub mod governance_registry {
             .iter()
             .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
             .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-        let er_entry = registrar.rates[er_idx];
+        let _er_entry = registrar.rates[er_idx];
         require!(
             er_idx == deposit_entry.rate_idx as usize,
             ErrorCode::InvalidMint
         );
 
-        // Scale the amount being withdrawn by the exchange rate.
-        let amount_scaled = { registrar.convert(&er_entry, amount)? };
-
         // Update deposit book keeping.
-        deposit_entry.amount_scaled -= amount_scaled;
-        deposit_entry.amount_deposited -= amount;
-        deposit_entry.amount_withdrawn += amount;
+        deposit_entry.amount_deposited_native -= amount;
 
         // Transfer the tokens to withdraw.
         token::transfer(
@@ -372,9 +388,10 @@ pub mod governance_registry {
     /// This "revise" instruction should be called in the same transaction,
     /// immediately before voting.
     pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
+        let registrar = ctx.accounts.registrar.load()?;
         let voter = ctx.accounts.voter.load()?;
         let record = &mut ctx.accounts.voter_weight_record;
-        record.voter_weight = voter.weight()?;
+        record.voter_weight = voter.weight(&registrar)?;
         record.voter_weight_expiry = Some(Clock::get()?.slot);
 
         Ok(())
@@ -405,11 +422,13 @@ pub mod governance_registry {
                         .position(|r| r.mint == m.key())
                         .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
                     let er_entry = registrar.rates[er_idx];
-                    let amount = registrar.convert(&er_entry, m.supply)?;
+                    let amount = er_entry.convert(m.supply);
                     let total = sum.checked_add(amount).unwrap();
                     Ok(total)
                 });
             total?
+                .checked_mul(FIXED_VOTE_WEIGHT_FACTOR + LOCKING_VOTE_WEIGHT_FACTOR)
+                .unwrap()
         };
         // TODO: SPL governance has not yet implemented this feature.
         //       When it has, probably need to write the result into an account,
@@ -422,8 +441,7 @@ pub mod governance_registry {
     pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
         let voter = &ctx.accounts.voter.load()?;
         let amount = voter.deposits.iter().fold(0u64, |sum, d| {
-            sum.checked_add(d.amount_deposited.checked_sub(d.amount_withdrawn).unwrap())
-                .unwrap()
+            sum.checked_add(d.amount_deposited_native).unwrap()
         });
         require!(amount == 0, VotingTokenNonZero);
         Ok(())

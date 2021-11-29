@@ -72,7 +72,7 @@ pub struct CreateVoter<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(idx: u16, rate: ExchangeRateEntry)]
+#[instruction(idx: u16, mint: Pubkey, rate: u64, decimals: u8)]
 pub struct CreateExchangeRate<'info> {
     #[account(
         init,

@@ -107,15 +107,12 @@ impl AddinCookie {
             &self.program_id,
         );
 
-        let entry = governance_registry::account::ExchangeRateEntry {
-            mint: deposit_mint,
-            decimals: mint.decimals,
-            rate,
-        };
         let data = anchor_lang::InstructionData::data(
             &governance_registry::instruction::CreateExchangeRate {
                 idx: index,
-                er: entry,
+                mint: deposit_mint,
+                rate,
+                decimals: mint.decimals,
             },
         );
 
@@ -337,7 +334,7 @@ impl VoterCookie {
             .get_account::<governance_registry::account::Voter>(self.address)
             .await
             .deposits[deposit_id as usize]
-            .amount_deposited
+            .amount_deposited_native
     }
 
     pub fn voting_token(&self, rate: &ExchangeRateCookie) -> Pubkey {

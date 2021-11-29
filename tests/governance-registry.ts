@@ -195,12 +195,9 @@ describe("voting-rights", () => {
   });
 
   it("Adds an exchange rate A", async () => {
-    const er = {
-      mint: mintA,
-      rate: new BN(1),
-      decimals: 6,
-    };
-    await program.rpc.createExchangeRate(0, er, {
+    let rate = new BN(1);
+    let decimals = 6;
+    await program.rpc.createExchangeRate(0, mintA, rate, decimals, {
       accounts: {
         exchangeVault: exchangeVaultA,
         depositMint: mintA,
@@ -217,12 +214,9 @@ describe("voting-rights", () => {
   });
 
   it("Adds an exchange rate B", async () => {
-    const er = {
-      mint: mintB,
-      rate: new BN(1000000),
-      decimals: 0,
-    };
-    await program.rpc.createExchangeRate(1, er, {
+    let rate = new BN(1000000);
+    let decimals = 0;
+    await program.rpc.createExchangeRate(1, mintB, rate, decimals, {
       accounts: {
         exchangeVault: exchangeVaultB,
         depositMint: mintB,
