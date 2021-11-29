@@ -227,7 +227,8 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
 
     context.solana.advance_clock_by_slots(2).await;
 
-    // can withdraw 3000 (original deposit) plus 2500 (new deposit)
+    // can withdraw 3000 (original deposit) plus 2500 (second deposit)
+    // nothing from the third deposit is vested
     addin
         .withdraw(
             &registrar,
@@ -289,7 +290,6 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.deposit, 0);
 
     // if we deposit now, we can immediately withdraw
-    // There is just one period left, should be fully withdrawable after
     addin
         .update_deposit(
             &registrar,
