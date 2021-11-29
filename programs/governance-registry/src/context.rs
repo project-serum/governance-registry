@@ -264,6 +264,7 @@ impl<'info> Withdraw<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateSchedule<'info> {
+    pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = authority)]
     pub voter: AccountLoader<'info, Voter>,
     pub authority: Signer<'info>,
@@ -304,4 +305,12 @@ pub struct CloseVoter<'info> {
     pub voter: AccountLoader<'info, Voter>,
     pub authority: Signer<'info>,
     pub sol_destination: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(time_offset: i64)]
+pub struct SetTimeOffset<'info> {
+    #[account(mut, has_one = authority)]
+    pub registrar: AccountLoader<'info, Registrar>,
+    pub authority: Signer<'info>,
 }

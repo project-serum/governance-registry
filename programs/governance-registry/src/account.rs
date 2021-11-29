@@ -48,6 +48,9 @@ pub struct Registrar {
     /// This must be larger or equal to the max of decimals over all accepted
     /// token mints.
     pub common_decimals: u8,
+
+    /// Debug only: time offset, to allow tests to move forward in time.
+    pub time_offset: i64,
 }
 
 impl Registrar {
@@ -60,6 +63,10 @@ impl Registrar {
             decimals,
             conversion_factor: rate.checked_mul(10u64.pow(decimal_diff.into())).unwrap(),
         })
+    }
+
+    pub fn clock_unix_timestamp(&self) -> i64 {
+        Clock::get().unwrap().unix_timestamp + self.time_offset
     }
 }
 
@@ -81,7 +88,7 @@ pub struct Voter {
 
 impl Voter {
     pub fn weight(&self, registrar: &Registrar) -> Result<u64> {
-        let curr_ts = Clock::get()?.unix_timestamp;
+        let curr_ts = registrar.clock_unix_timestamp();
         self.deposits
             .iter()
             .filter(|d| d.is_used)
@@ -352,8 +359,7 @@ impl DepositEntry {
 
     /// Returns the amount of unlocked tokens for this deposit--in native units
     /// of the original token amount (not scaled by the exchange rate).
-    pub fn vested(&self) -> Result<u64> {
-        let curr_ts = Clock::get()?.unix_timestamp;
+    pub fn vested(&self, curr_ts: i64) -> Result<u64> {
         if curr_ts < self.lockup.start_ts {
             return Ok(0);
         }
@@ -415,10 +421,10 @@ impl DepositEntry {
 
     /// Returns the amount that may be withdrawn given current vesting
     /// and previous withdraws.
-    pub fn amount_withdrawable(&self) -> u64 {
+    pub fn amount_withdrawable(&self, curr_ts: i64) -> u64 {
         let still_locked = self
             .amount_initially_locked_native
-            .checked_sub(self.vested().unwrap())
+            .checked_sub(self.vested(curr_ts).unwrap())
             .unwrap();
         self.amount_deposited_native
             .checked_sub(still_locked)

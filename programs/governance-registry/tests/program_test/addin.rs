@@ -409,6 +409,38 @@ impl AddinCookie {
             )
             .await)
     }
+
+    pub async fn set_time_offset(
+        &self,
+        registrar: &RegistrarCookie,
+        authority: &Keypair,
+        time_offset: i64,
+    ) {
+        let data = anchor_lang::InstructionData::data(
+            &governance_registry::instruction::SetTimeOffset { time_offset },
+        );
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &governance_registry::accounts::SetTimeOffset {
+                registrar: registrar.address,
+                authority: authority.pubkey(),
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await.unwrap();
+    }
 }
 
 impl ExchangeRateCookie {

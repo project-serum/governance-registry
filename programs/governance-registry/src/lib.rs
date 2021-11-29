@@ -6,7 +6,7 @@ use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
 use spl_governance::state::token_owner_record;
-use std::convert::TryFrom;
+use std::{str::FromStr, convert::TryFrom};
 
 mod access_control;
 pub mod account;
@@ -78,6 +78,7 @@ pub mod governance_registry {
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
         registrar.common_decimals = rate_decimals;
+        registrar.time_offset = 0;
 
         Ok(())
     }
@@ -157,7 +158,7 @@ pub mod governance_registry {
             let voter = &mut ctx.accounts.deposit.voter.load_mut()?;
 
             // Set the lockup start timestamp.
-            let start_ts = Clock::get()?.unix_timestamp;
+            let start_ts = registrar.clock_unix_timestamp();
 
             // Get the exchange rate entry associated with this deposit.
             let er_idx = registrar
@@ -226,9 +227,9 @@ pub mod governance_registry {
         // gradually over the remaining lockup duration.
         // The logic used is to wrap up the current lockup, and create a new one
         // for the expected remainder duration.
-        d_entry.amount_initially_locked_native -= d_entry.vested()?;
+        let curr_ts = registrar.clock_unix_timestamp();
+        d_entry.amount_initially_locked_native -= d_entry.vested(curr_ts)?;
         d_entry.amount_initially_locked_native += amount;
-        let curr_ts = Clock::get()?.unix_timestamp;
         d_entry.lockup.start_ts = d_entry
             .lockup
             .start_ts
@@ -301,11 +302,12 @@ pub mod governance_registry {
         );
 
         // Get the deposit being withdrawn from.
+        let curr_ts = registrar.clock_unix_timestamp();
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
         require!(deposit_entry.is_used, InvalidDepositId);
-        msg!("deposit_entry.vested() {:?}", deposit_entry.vested());
+        msg!("deposit_entry.vested() {:?}", deposit_entry.vested(curr_ts));
         require!(
-            deposit_entry.amount_withdrawable() >= amount,
+            deposit_entry.amount_withdrawable(curr_ts) >= amount,
             InsufficientVestedTokens
         );
         // technically unnecessary
@@ -360,6 +362,7 @@ pub mod governance_registry {
     /// Resets a lockup to start at the current slot timestamp and to last for
     /// `days`, which must be longer than the number of days left on the lockup.
     pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, days: i64) -> Result<()> {
+        let registrar = ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
 
@@ -367,15 +370,14 @@ pub mod governance_registry {
         require!(d.is_used, InvalidDepositId);
 
         // The lockup period can only be increased.
-        let curr_ts = Clock::get()?.unix_timestamp;
+        let curr_ts = registrar.clock_unix_timestamp();
         require!(days as u64 > d.lockup.days_left(curr_ts)?, InvalidDays);
 
-        let start_ts = Clock::get()?.unix_timestamp;
-        let end_ts = start_ts
+        let end_ts = curr_ts
             .checked_add(days.checked_mul(SECS_PER_DAY).unwrap())
             .unwrap();
 
-        d.lockup.start_ts = start_ts;
+        d.lockup.start_ts = curr_ts;
         d.lockup.end_ts = end_ts;
 
         Ok(())
@@ -444,6 +446,14 @@ pub mod governance_registry {
             sum.checked_add(d.amount_deposited_native).unwrap()
         });
         require!(amount == 0, VotingTokenNonZero);
+        Ok(())
+    }
+
+    pub fn set_time_offset(ctx: Context<SetTimeOffset>, time_offset: i64) -> Result<()> {
+        let allowed_program = Pubkey::from_str("GovernanceProgram11111111111111111111111111").unwrap();
+        let registrar = &mut ctx.accounts.registrar.load_mut()?;
+        require!(registrar.governance_program_id == allowed_program, ErrorCode::DebugInstruction);
+        registrar.time_offset = time_offset;
         Ok(())
     }
 }

@@ -38,4 +38,6 @@ pub enum ErrorCode {
     ForbiddenCpi,
     #[msg("")]
     InvalidMint,
+    #[msg("")]
+    DebugInstruction,
 }
