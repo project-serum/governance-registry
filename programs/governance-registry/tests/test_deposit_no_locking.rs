@@ -46,6 +46,7 @@ async fn balances(
 #[tokio::test]
 async fn test_deposit_no_locking() -> Result<(), TransportError> {
     let context = TestContext::new().await;
+    let addin = &context.addin;
 
     let payer = &context.users[0].key;
     let realm_authority = Keypair::new();
@@ -65,20 +66,17 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_token_owner_record(voter_authority.pubkey(), &payer)
         .await;
 
-    let registrar = context.addin.create_registrar(&realm, payer).await;
-    let mngo_rate = context
-        .addin
+    let registrar = addin.create_registrar(&realm, payer).await;
+    let mngo_rate = addin
         .create_exchange_rate(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
         .await;
 
-    let voter = context
-        .addin
+    let voter = addin
         .create_voter(&registrar, &voter_authority, &payer)
         .await;
 
     let voter2_authority = &context.users[2].key;
-    let voter2 = context
-        .addin
+    let voter2 = addin
         .create_voter(&registrar, &voter2_authority, &payer)
         .await;
 
@@ -101,8 +99,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(initial.vault, 0);
     assert_eq!(initial.deposit, 0);
 
-    context
-        .addin
+    addin
         .create_deposit(
             &registrar,
             &voter,
@@ -122,8 +119,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 10000);
 
     // add to the existing deposit 0
-    context
-        .addin
+    addin
         .update_deposit(
             &registrar,
             &voter,
@@ -142,8 +138,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit2.deposit, 15000);
 
     // create a separate deposit (index 1)
-    context
-        .addin
+    addin
         .create_deposit(
             &registrar,
             &voter,
@@ -156,8 +151,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         )
         .await?;
 
-    context
-        .addin
+    addin
         .withdraw(
             &registrar,
             &voter,
@@ -178,8 +172,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit3.deposit, 7000);
 
     // Withdraw works now because some slots were advanced (in get_balances())
-    context
-        .addin
+    addin
         .withdraw(
             &registrar,
             &voter,
@@ -198,8 +191,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_withdraw1.vault, 12000);
     assert_eq!(after_withdraw1.deposit, 5000);
 
-    context
-        .addin
+    addin
         .withdraw(
             &registrar,
             &voter,
@@ -213,8 +205,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .await
         .expect_err("withdrew too much");
 
-    context
-        .addin
+    addin
         .withdraw(
             &registrar,
             &voter,
@@ -248,8 +239,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(voter2_balances.voter_weight, 0);
 
     // now voter2 deposits
-    context
-        .addin
+    addin
         .create_deposit(
             &registrar,
             &voter2,
