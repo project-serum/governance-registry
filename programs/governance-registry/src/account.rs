@@ -47,20 +47,20 @@ pub struct Registrar {
     ///
     /// This must be larger or equal to the max of decimals over all accepted
     /// token mints.
-    pub common_decimals: u8,
+    pub vote_weight_decimals: u8,
 
     /// Debug only: time offset, to allow tests to move forward in time.
     pub time_offset: i64,
 }
 
 impl Registrar {
-    pub fn new_rate(&self, mint: Pubkey, rate: u64, decimals: u8) -> Result<ExchangeRateEntry> {
-        require!(self.common_decimals >= decimals, InvalidDecimals);
-        let decimal_diff = self.common_decimals.checked_sub(decimals).unwrap();
+    pub fn new_rate(&self, mint: Pubkey, mint_decimals: u8, rate: u64) -> Result<ExchangeRateEntry> {
+        require!(self.vote_weight_decimals >= mint_decimals, InvalidDecimals);
+        let decimal_diff = self.vote_weight_decimals.checked_sub(mint_decimals).unwrap();
         Ok(ExchangeRateEntry {
             mint,
             rate,
-            decimals,
+            mint_decimals,
             conversion_factor: rate.checked_mul(10u64.pow(decimal_diff.into())).unwrap(),
         })
     }
@@ -103,8 +103,11 @@ impl Voter {
 #[zero_copy]
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct ExchangeRateEntry {
-    // Mint for this entry.
+    /// Mint for this entry.
     pub mint: Pubkey,
+
+    /// Mint decimals.
+    pub mint_decimals: u8,
 
     /// Exchange rate for 1.0 decimal-respecting unit of mint currency
     /// into the common vote currency.
@@ -114,8 +117,6 @@ pub struct ExchangeRateEntry {
     /// was 3 and common_decimals was 6.
     pub rate: u64,
 
-    // Mint decimals.
-    pub decimals: u8,
 
     /// Factor for converting mint native currency to common vote currency,
     /// including decimal handling.
@@ -267,33 +268,33 @@ impl DepositEntry {
             .convert(self.amount_deposited_native)
             .checked_mul(FIXED_VOTE_WEIGHT_FACTOR)
             .unwrap();
-        if LOCKING_VOTE_WEIGHT_FACTOR > 0 {
-            let amount_scaled = rate.convert(self.amount_initially_locked_native);
-            Ok(fixed_contribution
-                + self
-                    .voting_power_locked(curr_ts, amount_scaled)?
-                    .checked_mul(LOCKING_VOTE_WEIGHT_FACTOR)
-                    .unwrap())
-        } else {
-            Ok(fixed_contribution)
+        if LOCKING_VOTE_WEIGHT_FACTOR == 0 {
+            return Ok(fixed_contribution)
         }
+
+        let max_locked_contribution = rate.convert(self.amount_initially_locked_native);
+        Ok(fixed_contribution
+            + self
+                .voting_power_locked(curr_ts, max_locked_contribution)?
+                .checked_mul(LOCKING_VOTE_WEIGHT_FACTOR)
+                .unwrap())
     }
 
     /// Vote contribution from locked funds only, not scaled by
     /// LOCKING_VOTE_WEIGHT_FACTOR yet.
-    fn voting_power_locked(&self, curr_ts: i64, amount_scaled: u64) -> Result<u64> {
-        if curr_ts < self.lockup.start_ts {
+    fn voting_power_locked(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
+        if curr_ts < self.lockup.start_ts || curr_ts >= self.lockup.end_ts {
             return Ok(0);
         }
         match self.lockup.kind {
             LockupKind::None => Ok(0),
-            LockupKind::Daily => self.voting_power_daily(curr_ts, amount_scaled),
-            LockupKind::Monthly => self.voting_power_monthly(curr_ts, amount_scaled),
-            LockupKind::Cliff => self.voting_power_cliff(curr_ts, amount_scaled),
+            LockupKind::Daily => self.voting_power_daily(curr_ts, max_contribution),
+            LockupKind::Monthly => self.voting_power_monthly(curr_ts, max_contribution),
+            LockupKind::Cliff => self.voting_power_cliff(curr_ts, max_contribution),
         }
     }
 
-    fn voting_power_daily(&self, curr_ts: i64, amount_scaled: u64) -> Result<u64> {
+    fn voting_power_daily(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
         let m = MAX_DAYS_LOCKED;
         let n = self.lockup.days_left(curr_ts)?;
         let days_total = self.lockup.days_total()?;
@@ -302,7 +303,10 @@ impl DepositEntry {
             return Ok(0);
         }
 
-        let decayed_vote_weight = amount_scaled
+        // This computes
+        // amount / days_total * (1 + 2 + ... + n) / m
+        // See the comment on voting_power().
+        let decayed_vote_weight = max_contribution
             .checked_mul(
                 // Ok to divide by two here because, if n is zero, then the
                 // voting power is zero. And if n is one or above, then the
@@ -319,7 +323,7 @@ impl DepositEntry {
         Ok(decayed_vote_weight)
     }
 
-    fn voting_power_monthly(&self, curr_ts: i64, amount_scaled: u64) -> Result<u64> {
+    fn voting_power_monthly(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
         let m = MAX_MONTHS_LOCKED;
         let n = self.lockup.months_left(curr_ts)?;
         let months_total = self.lockup.months_total()?;
@@ -328,7 +332,7 @@ impl DepositEntry {
             return Ok(0);
         }
 
-        let decayed_vote_weight = amount_scaled
+        let decayed_vote_weight = max_contribution
             .checked_mul(
                 // Ok to divide by two here because, if n is zero, then the
                 // voting power is zero. And if n is one or above, then the
@@ -345,11 +349,11 @@ impl DepositEntry {
         Ok(decayed_vote_weight)
     }
 
-    fn voting_power_cliff(&self, curr_ts: i64, amount_scaled: u64) -> Result<u64> {
+    fn voting_power_cliff(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
         let decayed_voting_weight = self
             .lockup
             .days_left(curr_ts)?
-            .checked_mul(amount_scaled)
+            .checked_mul(max_contribution)
             .unwrap()
             .checked_div(MAX_DAYS_LOCKED)
             .unwrap();

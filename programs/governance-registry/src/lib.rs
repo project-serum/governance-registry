@@ -68,7 +68,7 @@ pub mod governance_registry {
     /// per governance realm.
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
-        rate_decimals: u8,
+        vote_weight_decimals: u8,
         registrar_bump: u8,
     ) -> Result<()> {
         let registrar = &mut ctx.accounts.registrar.load_init()?;
@@ -77,7 +77,7 @@ pub mod governance_registry {
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.authority = ctx.accounts.authority.key();
-        registrar.common_decimals = rate_decimals;
+        registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
 
         Ok(())
@@ -99,7 +99,7 @@ pub mod governance_registry {
     ) -> Result<()> {
         require!(rate > 0, InvalidRate);
         let registrar = &mut ctx.accounts.registrar.load_mut()?;
-        registrar.rates[idx as usize] = registrar.new_rate(mint, rate, decimals)?;
+        registrar.rates[idx as usize] = registrar.new_rate(mint, decimals, rate)?;
         Ok(())
     }
 

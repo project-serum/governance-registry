@@ -45,10 +45,10 @@ impl AddinCookie {
 
         let community_token_mint = realm.community_token_mint.pubkey.unwrap();
 
-        let rate_decimals = 6;
+        let vote_weight_decimals = 6;
         let data = anchor_lang::InstructionData::data(
             &governance_registry::instruction::CreateRegistrar {
-                rate_decimals,
+                vote_weight_decimals,
                 registrar_bump,
             },
         );
