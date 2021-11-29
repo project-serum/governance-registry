@@ -416,9 +416,10 @@ impl AddinCookie {
         authority: &Keypair,
         time_offset: i64,
     ) {
-        let data = anchor_lang::InstructionData::data(
-            &governance_registry::instruction::SetTimeOffset { time_offset },
-        );
+        let data =
+            anchor_lang::InstructionData::data(&governance_registry::instruction::SetTimeOffset {
+                time_offset,
+            });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
             &governance_registry::accounts::SetTimeOffset {
@@ -439,7 +440,8 @@ impl AddinCookie {
 
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
-            .await.unwrap();
+            .await
+            .unwrap();
     }
 }
 

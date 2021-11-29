@@ -54,9 +54,17 @@ pub struct Registrar {
 }
 
 impl Registrar {
-    pub fn new_rate(&self, mint: Pubkey, mint_decimals: u8, rate: u64) -> Result<ExchangeRateEntry> {
+    pub fn new_rate(
+        &self,
+        mint: Pubkey,
+        mint_decimals: u8,
+        rate: u64,
+    ) -> Result<ExchangeRateEntry> {
         require!(self.vote_weight_decimals >= mint_decimals, InvalidDecimals);
-        let decimal_diff = self.vote_weight_decimals.checked_sub(mint_decimals).unwrap();
+        let decimal_diff = self
+            .vote_weight_decimals
+            .checked_sub(mint_decimals)
+            .unwrap();
         Ok(ExchangeRateEntry {
             mint,
             rate,
@@ -116,7 +124,6 @@ pub struct ExchangeRateEntry {
     /// of 2.000000 in common vote currency. In the example mint decimals
     /// was 3 and common_decimals was 6.
     pub rate: u64,
-
 
     /// Factor for converting mint native currency to common vote currency,
     /// including decimal handling.
@@ -269,7 +276,7 @@ impl DepositEntry {
             .checked_mul(FIXED_VOTE_WEIGHT_FACTOR)
             .unwrap();
         if LOCKING_VOTE_WEIGHT_FACTOR == 0 {
-            return Ok(fixed_contribution)
+            return Ok(fixed_contribution);
         }
 
         let max_locked_contribution = rate.convert(self.amount_initially_locked_native);
@@ -379,7 +386,7 @@ impl DepositEntry {
     }
 
     fn lockup_none(&self) -> Result<u64> {
-        Ok(self.amount_deposited_native)
+        Ok(self.amount_initially_locked_native)
     }
 
     fn vested_daily(&self, curr_ts: i64) -> Result<u64> {

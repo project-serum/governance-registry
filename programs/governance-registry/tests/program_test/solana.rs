@@ -52,7 +52,12 @@ impl SolanaCookie {
     }
 
     pub async fn get_clock(&self) -> solana_program::clock::Clock {
-        self.context.borrow_mut().banks_client.get_clock().await.unwrap()
+        self.context
+            .borrow_mut()
+            .banks_client
+            .get_clock()
+            .await
+            .unwrap()
     }
 
     #[allow(dead_code)]
