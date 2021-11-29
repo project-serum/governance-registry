@@ -212,10 +212,15 @@ impl DepositEntry {
             return Ok(0);
         }
         match self.lockup.kind {
+            LockupKind::None => self.voting_power_lockup_none(),
             LockupKind::Daily => self.voting_power_daily(curr_ts),
             LockupKind::Monthly => self.voting_power_monthly(curr_ts),
             LockupKind::Cliff => self.voting_power_cliff(curr_ts),
         }
+    }
+
+    fn voting_power_lockup_none(&self) -> Result<u64> {
+        Ok(self.amount_scaled)
     }
 
     fn voting_power_daily(&self, curr_ts: i64) -> Result<u64> {
@@ -290,10 +295,15 @@ impl DepositEntry {
             return Ok(0);
         }
         match self.lockup.kind {
+            LockupKind::None => self.lockup_none(),
             LockupKind::Daily => self.vested_daily(curr_ts),
             LockupKind::Monthly => self.vested_monthly(curr_ts),
             LockupKind::Cliff => self.vested_cliff(),
         }
+    }
+
+    fn lockup_none(&self) -> Result<u64> {
+        Ok(self.amount_deposited)
     }
 
     fn vested_daily(&self, curr_ts: i64) -> Result<u64> {
@@ -423,6 +433,7 @@ impl Lockup {
 #[repr(u8)]
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
 pub enum LockupKind {
+    None,
     Daily,
     Monthly,
     Cliff,

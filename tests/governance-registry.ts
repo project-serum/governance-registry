@@ -27,7 +27,9 @@ describe("voting-rights", () => {
     .GovernanceRegistry as Program<GovernanceRegistry>;
 
   // Initialized variables shared across tests.
-  const governanceProgramId = new PublicKey("GovernanceProgram11111111111111111111111111");
+  const governanceProgramId = new PublicKey(
+    "GovernanceProgram11111111111111111111111111"
+  );
   const realm = Keypair.generate().publicKey;
   const votingMintDecimals = 6;
   const tokenProgram = TOKEN_PROGRAM_ID;
@@ -140,7 +142,9 @@ describe("voting-rights", () => {
     voterWeightRecord = _voterWeightRecord;
     voterWeightRecordBump = _voterWeightRecordBump;
     // TODO: Need to make a governance program and create a real record to be able to withdraw
-    tokenOwnerRecord = new PublicKey("TokenownerRecord111111111111111111111111111");
+    tokenOwnerRecord = new PublicKey(
+      "TokenownerRecord111111111111111111111111111"
+    );
   });
 
   it("Creates token clients", async () => {
