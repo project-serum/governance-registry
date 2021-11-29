@@ -92,6 +92,29 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             depot_id,
         )
     };
+    let withdraw = |amount: u64| {
+        addin.withdraw(
+            &registrar,
+            &voter,
+            &token_owner_record,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            0,
+            amount,
+        )
+    };
+    let update_deposit = |amount: u64| {
+        addin.update_deposit(
+            &registrar,
+            &voter,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            0,
+            amount,
+        )
+    };
 
     // test deposit and withdraw
 
@@ -110,7 +133,8 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             9000,
             3,
         )
-        .await?;
+        .await
+        .unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -119,19 +143,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 9000);
 
     // cannot withdraw yet, nothing is vested
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            1,
-        )
-        .await
-        .expect_err("nothing vested yet");
+    withdraw(1).await.expect_err("nothing vested yet");
 
     // advance a day
     addin
@@ -139,32 +151,8 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
         .await;
     context.solana.advance_clock_by_slots(2).await;
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            3001,
-        )
-        .await
-        .expect_err("withdrew too much");
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            3000,
-        )
-        .await
-        .unwrap();
+    withdraw(3001).await.expect_err("withdrew too much");
+    withdraw(3000).await.unwrap();
 
     let after_withdraw = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
@@ -174,17 +162,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
 
     // There are two vesting periods left, if we add 5000 to the deposit,
     // half of that should vest each day.
-    addin
-        .update_deposit(
-            &registrar,
-            &voter,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5000,
-        )
-        .await?;
+    update_deposit(5000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -192,19 +170,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_deposit.vault, 11000);
     assert_eq!(after_deposit.deposit, 11000);
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            1,
-        )
-        .await
-        .expect_err("nothing vested yet");
+    withdraw(1).await.expect_err("nothing vested yet");
 
     // advance another day
     addin
@@ -213,48 +179,14 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     context.solana.advance_clock_by_slots(2).await;
 
     // There is just one period left, should be fully withdrawable after
-    addin
-        .update_deposit(
-            &registrar,
-            &voter,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            1000,
-        )
-        .await?;
+    update_deposit(1000).await.unwrap();
 
     context.solana.advance_clock_by_slots(2).await;
 
     // can withdraw 3000 (original deposit) plus 2500 (second deposit)
     // nothing from the third deposit is vested
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5501,
-        )
-        .await
-        .expect_err("withdrew too much");
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5500,
-        )
-        .await
-        .unwrap();
+    withdraw(5501).await.expect_err("withdrew too much");
+    withdraw(5500).await.unwrap();
 
     let after_withdraw = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
@@ -269,19 +201,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     context.solana.advance_clock_by_slots(2).await;
 
     // can withdraw the rest
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            6500,
-        )
-        .await
-        .unwrap();
+    withdraw(6500).await.unwrap();
 
     let after_withdraw = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
@@ -290,17 +210,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.deposit, 0);
 
     // if we deposit now, we can immediately withdraw
-    addin
-        .update_deposit(
-            &registrar,
-            &voter,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            1000,
-        )
-        .await?;
+    update_deposit(1000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -308,19 +218,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_deposit.vault, 1000);
     assert_eq!(after_deposit.deposit, 1000);
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            1000,
-        )
-        .await
-        .unwrap();
+    withdraw(1000).await.unwrap();
 
     let after_withdraw = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);

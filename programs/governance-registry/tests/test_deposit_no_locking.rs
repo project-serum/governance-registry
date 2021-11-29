@@ -92,7 +92,29 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             depot_id,
         )
     };
-
+    let withdraw = |amount: u64| {
+        addin.withdraw(
+            &registrar,
+            &voter,
+            &token_owner_record,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            0,
+            amount,
+        )
+    };
+    let update_deposit = |amount: u64| {
+        addin.update_deposit(
+            &registrar,
+            &voter,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            0,
+            amount,
+        )
+    };
     // test deposit and withdraw
 
     let initial = get_balances(0).await;
@@ -110,7 +132,8 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             10000,
             0,
         )
-        .await?;
+        .await
+        .unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -119,17 +142,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 10000);
 
     // add to the existing deposit 0
-    addin
-        .update_deposit(
-            &registrar,
-            &voter,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5000,
-        )
-        .await?;
+    update_deposit(5000).await.unwrap();
 
     let after_deposit2 = get_balances(0).await;
     assert_eq!(initial.token, after_deposit2.token + after_deposit2.vault);
@@ -149,19 +162,10 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             7000,
             0,
         )
-        .await?;
+        .await
+        .unwrap();
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            10000,
-        )
+    withdraw(10000)
         .await
         .expect_err("deposit happened in the same slot");
 
@@ -172,18 +176,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit3.deposit, 7000);
 
     // Withdraw works now because some slots were advanced (in get_balances())
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            10000,
-        )
-        .await?;
+    withdraw(10000).await.unwrap();
 
     let after_withdraw1 = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw1.token + after_withdraw1.vault);
@@ -191,32 +184,9 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_withdraw1.vault, 12000);
     assert_eq!(after_withdraw1.deposit, 5000);
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5001,
-        )
-        .await
-        .expect_err("withdrew too much");
+    withdraw(5001).await.expect_err("withdrew too much");
 
-    addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            5000,
-        )
-        .await?;
+    withdraw(5000).await.unwrap();
 
     let after_withdraw2 = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw2.token + after_withdraw2.vault);
