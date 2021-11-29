@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 
 // Generate a VoteWeightRecord Anchor wrapper, owned by the current program.
 // VoteWeightRecords are unique in that they are defined by the SPL governance
-// program, but they are actaully owned by this program.
+// program, but they are actually owned by this program.
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
@@ -355,6 +355,7 @@ pub struct Lockup {
     // End of the lockup.
     pub end_ts: i64,
     // Empty bytes for future upgrades.
+    // TODO: what kinds of upgrades do we foresee?
     pub padding: [u8; 16],
 }
 

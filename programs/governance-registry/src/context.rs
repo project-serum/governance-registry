@@ -17,12 +17,17 @@ pub struct CreateRegistrar<'info> {
         payer = payer,
         space = 8 + size_of::<Registrar>()
     )]
+    /// a voting registrar. There can only be a single registrar
+    /// per governance realm.
     pub registrar: AccountLoader<'info, Registrar>,
     pub governance_program_id: AccountInfo<'info>,
-    // Unsafe and untrusted. This instruction needs to be invoked immediatley
+    // Unsafe and untrusted. This instruction needs to be invoked immediately
     // after the realm is created.
+    // TODO can't we ensure that a realm owner can call this instruction?
     pub realm: UncheckedAccount<'info>,
+    // TODO what about council mint?
     pub realm_community_mint: Account<'info, Mint>,
+    // TODO: can't this be the realm?
     pub authority: UncheckedAccount<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,

@@ -63,7 +63,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod governance_registry {
     use super::*;
 
-    /// Creates a new voting registrar. There can only be a single regsitrar
+    /// Creates a new voting registrar. There can only be a single registrar
     /// per governance realm.
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
