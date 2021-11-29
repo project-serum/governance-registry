@@ -51,22 +51,8 @@ impl SolanaCookie {
             .await
     }
 
-    pub async fn get_bincode_account<T: serde::de::DeserializeOwned>(&self, address: &Pubkey) -> T {
-        self.context
-            .borrow_mut()
-            .banks_client
-            .get_account(*address)
-            .await
-            .unwrap()
-            .map(|a| bincode::deserialize::<T>(&a.data).unwrap())
-            .expect(format!("GET-TEST-ACCOUNT-ERROR: Account {}", address).as_str())
-    }
-
     pub async fn get_clock(&self) -> solana_program::clock::Clock {
-        self.get_bincode_account::<solana_program::clock::Clock>(
-            &solana_program::sysvar::clock::id(),
-        )
-        .await
+        self.context.borrow_mut().banks_client.get_clock().await.unwrap()
     }
 
     #[allow(dead_code)]

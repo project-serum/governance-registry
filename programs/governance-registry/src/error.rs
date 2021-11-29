@@ -3,21 +3,21 @@ use anchor_lang::prelude::*;
 #[error]
 pub enum ErrorCode {
     #[msg("Exchange rate must be greater than zero")]
-    InvalidRate,
+    InvalidRate, // 300
     #[msg("")]
     RatesFull,
     #[msg("")]
-    ExchangeRateEntryNotFound,
+    ExchangeRateEntryNotFound, // 302
     #[msg("")]
     DepositEntryNotFound,
     #[msg("")]
-    DepositEntryFull,
+    DepositEntryFull, // 304
     #[msg("")]
     VotingTokenNonZero,
     #[msg("")]
-    InvalidDepositId,
+    InvalidDepositId, // 306
     #[msg("")]
-    InsufficientVestedTokens,
+    InsufficientVestedTokens, // 307
     #[msg("")]
     UnableToConvert,
     #[msg("")]
