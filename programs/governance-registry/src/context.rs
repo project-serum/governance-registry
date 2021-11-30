@@ -20,7 +20,7 @@ pub struct CreateRegistrar<'info> {
     /// a voting registrar. There can only be a single registrar
     /// per governance realm.
     pub registrar: AccountLoader<'info, Registrar>,
-    pub governance_program_id: AccountInfo<'info>,
+    pub governance_program_id: UncheckedAccount<'info>,
     // Unsafe and untrusted. This instruction needs to be invoked immediately
     // after the realm is created.
     // TODO can't we ensure that a realm owner can call this instruction?
@@ -194,7 +194,7 @@ pub struct Withdraw<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
-    pub token_owner_record: AccountInfo<'info>,
+    pub token_owner_record: UncheckedAccount<'info>,
     #[account(
         mut,
         associated_token::authority = registrar,
