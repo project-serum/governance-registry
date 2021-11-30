@@ -310,6 +310,11 @@ impl DepositEntry {
             return Ok(0);
         }
 
+        // TODO: Switch the decay interval to be seconds, not days. That means each
+        // of the daily cliff-locked deposits here will decay in vote power over the
+        // day. That complicates the computaton here, but makes it easier to do
+        // the right thing for monthly vesting too.
+        //
         // This computes
         // amount / days_total * (1 + 2 + ... + n) / m
         // See the comment on voting_power().
@@ -339,6 +344,10 @@ impl DepositEntry {
             return Ok(0);
         }
 
+        // TODO: This is wrong because it does not handle vote decay during a month.
+        // Desire: A one-month monthly vested deposit should be equivalent to a
+        // one-month cliff-locked deposit. Fixing this will be easier once the
+        // decay interval is switched to seconds.
         let decayed_vote_weight = max_contribution
             .checked_mul(
                 // Ok to divide by two here because, if n is zero, then the
@@ -357,6 +366,7 @@ impl DepositEntry {
     }
 
     fn voting_power_cliff(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
+        // TODO: Decay by the second, not by the day.
         let decayed_voting_weight = self
             .lockup
             .days_left(curr_ts)?
