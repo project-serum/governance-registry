@@ -55,6 +55,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_realm(
             "testrealm",
             realm_authority.pubkey(),
+            context.users[0].token_accounts[0],
             &context.mints[0],
             &payer,
             &context.addin.program_id,
