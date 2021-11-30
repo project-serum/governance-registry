@@ -10,6 +10,8 @@ pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
 #[derive(Accounts)]
 #[instruction(vote_weight_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
+    /// a voting registrar. There can only be a single registrar
+    /// per governance realm.
     #[account(
         init,
         seeds = [realm.key().as_ref()],
@@ -17,64 +19,31 @@ pub struct CreateRegistrar<'info> {
         payer = payer,
         space = 8 + size_of::<Registrar>()
     )]
-    /// a voting registrar. There can only be a single registrar
-    /// per governance realm.
     pub registrar: AccountLoader<'info, Registrar>,
-    pub governance_program_id: UncheckedAccount<'info>,
-    // Unsafe and untrusted. This instruction needs to be invoked immediately
-    // after the realm is created.
-    // TODO can't we ensure that a realm owner can call this instruction?
-    pub realm: UncheckedAccount<'info>,
-    // TODO what about council mint?
-    pub realm_community_mint: Account<'info, Mint>,
-    // TODO: can't this be the realm?
     pub registrar_authority: UncheckedAccount<'info>,
     pub registrar_authority_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
-}
 
-#[derive(Accounts)]
-#[instruction(voter_bump: u8, voter_weight_record_bump: u8)]
-pub struct CreateVoter<'info> {
-    #[account(
-        init,
-        seeds = [registrar.key().as_ref(), voter_authority.key().as_ref()],
-        bump = voter_bump,
-        payer = voter_authority,
-        space = 8 + size_of::<Voter>(),
-    )]
-    pub voter: AccountLoader<'info, Voter>,
-    #[account(
-        init,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
-        bump = voter_weight_record_bump,
-        payer = payer,
-        space = 150,
-    )]
-    pub voter_weight_record: Account<'info, VoterWeightRecord>,
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub governance_program_id: UncheckedAccount<'info>,
+    pub realm: UncheckedAccount<'info>,
+    pub realm_community_mint: Account<'info, Mint>,
 
-    // TODO: Why is authority and payer different? Is it necessary that Voter and VoterWeightRecord are paid for differently?
-    #[account(mut)]
-    pub voter_authority: Signer<'info>,
+    // TODO: Allow registrar creation only for realm_authority!
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(address = tx_instructions::ID)]
-    pub instructions: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 #[instruction(idx: u16, mint: Pubkey, rate: u64, decimals: u8)]
 pub struct CreateExchangeRate<'info> {
+    #[account(mut, has_one = registrar_authority)]
+    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar_authority: Signer<'info>,
+
     #[account(
         init,
         payer = payer,
@@ -82,6 +51,8 @@ pub struct CreateExchangeRate<'info> {
         associated_token::mint = deposit_mint,
     )]
     pub exchange_vault: Account<'info, TokenAccount>,
+    pub deposit_mint: Account<'info, Mint>,
+
     #[account(
         init,
         seeds = [registrar.key().as_ref(), deposit_mint.key().as_ref()],
@@ -92,17 +63,50 @@ pub struct CreateExchangeRate<'info> {
         mint::decimals = deposit_mint.decimals,
     )]
     pub voting_mint: Account<'info, Mint>,
-    pub deposit_mint: Account<'info, Mint>,
-    #[account(mut, has_one = registrar_authority)]
-    pub registrar: AccountLoader<'info, Registrar>,
-    #[account(mut)]
-    pub registrar_authority: Signer<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
+
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(voter_bump: u8, voter_weight_record_bump: u8)]
+pub struct CreateVoter<'info> {
+    pub registrar: AccountLoader<'info, Registrar>,
+
+    #[account(
+        init,
+        seeds = [registrar.key().as_ref(), voter_authority.key().as_ref()],
+        bump = voter_bump,
+        payer = payer,
+        space = 8 + size_of::<Voter>(),
+    )]
+    pub voter: AccountLoader<'info, Voter>,
+    pub voter_authority: Signer<'info>,
+
+    #[account(
+        init,
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
+        bump = voter_weight_record_bump,
+        payer = payer,
+        space = 150,
+    )]
+    pub voter_weight_record: Account<'info, VoterWeightRecord>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+
+    #[account(address = tx_instructions::ID)]
+    pub instructions: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -113,19 +117,26 @@ pub struct CreateDeposit<'info> {
 #[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
+
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
+    #[account(mut)]
+    pub voter_authority: Signer<'info>,
+
     #[account(
         mut,
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
     pub exchange_vault: Account<'info, TokenAccount>,
+    pub deposit_mint: Account<'info, Mint>,
+
     #[account(
         mut,
         constraint = deposit_token.mint == deposit_mint.key(),
     )]
     pub deposit_token: Account<'info, TokenAccount>,
+
     #[account(
         init_if_needed,
         payer = voter_authority,
@@ -133,15 +144,13 @@ pub struct UpdateDeposit<'info> {
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub voter_authority: Signer<'info>,
-    pub deposit_mint: Account<'info, Mint>,
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), deposit_token.mint.as_ref()],
         bump,
     )]
     pub voting_mint: Account<'info, Mint>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -193,9 +202,12 @@ impl<'info> UpdateDeposit<'info> {
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
+
     #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
+    pub voter_authority: Signer<'info>,
     pub token_owner_record: UncheckedAccount<'info>,
+
     #[account(
         mut,
         associated_token::authority = registrar,
@@ -203,6 +215,10 @@ pub struct Withdraw<'info> {
     )]
     pub exchange_vault: Account<'info, TokenAccount>,
     pub withdraw_mint: Account<'info, Mint>,
+
+    #[account(mut)]
+    pub destination: Account<'info, TokenAccount>,
+
     #[account(
         mut,
         associated_token::authority = voter_authority,
@@ -215,9 +231,7 @@ pub struct Withdraw<'info> {
         bump,
     )]
     pub voting_mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub destination: Account<'info, TokenAccount>,
-    pub voter_authority: Signer<'info>,
+
     pub token_program: Program<'info, Token>,
 }
 
@@ -273,6 +287,7 @@ pub struct CloseDeposit<'info> {
 #[derive(Accounts)]
 pub struct UpdateSchedule<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
+
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
@@ -281,11 +296,14 @@ pub struct UpdateSchedule<'info> {
 #[derive(Accounts)]
 pub struct UpdateVoterWeightRecord<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
+
     #[account(
         has_one = registrar,
         has_one = voter_authority,
     )]
     pub voter: AccountLoader<'info, Voter>,
+    pub voter_authority: Signer<'info>,
+
     #[account(
         mut,
         seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
@@ -294,7 +312,7 @@ pub struct UpdateVoterWeightRecord<'info> {
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
-    pub voter_authority: Signer<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
