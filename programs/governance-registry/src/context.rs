@@ -28,7 +28,7 @@ pub struct CreateRegistrar<'info> {
     // TODO what about council mint?
     pub realm_community_mint: Account<'info, Mint>,
     // TODO: can't this be the realm?
-    pub authority: UncheckedAccount<'info>,
+    pub registrar_authority: UncheckedAccount<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -41,15 +41,15 @@ pub struct CreateRegistrar<'info> {
 pub struct CreateVoter<'info> {
     #[account(
         init,
-        seeds = [registrar.key().as_ref(), authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), voter_authority.key().as_ref()],
         bump = voter_bump,
-        payer = authority,
+        payer = voter_authority,
         space = 8 + size_of::<Voter>(),
     )]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
         init,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
         bump = voter_weight_record_bump,
         payer = payer,
         space = 150,
@@ -59,7 +59,7 @@ pub struct CreateVoter<'info> {
 
     // TODO: Why is authority and payer different? Is it necessary that Voter and VoterWeightRecord are paid for differently?
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -92,10 +92,10 @@ pub struct CreateExchangeRate<'info> {
     )]
     pub voting_mint: Account<'info, Mint>,
     pub deposit_mint: Account<'info, Mint>,
-    #[account(mut, has_one = authority)]
+    #[account(mut, has_one = registrar_authority)]
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub registrar_authority: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
@@ -112,7 +112,7 @@ pub struct CreateDeposit<'info> {
 #[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
-    #[account(mut, has_one = authority, has_one = registrar)]
+    #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
         mut,
@@ -127,13 +127,13 @@ pub struct UpdateDeposit<'info> {
     pub deposit_token: Account<'info, TokenAccount>,
     #[account(
         init_if_needed,
-        payer = authority,
-        associated_token::authority = authority,
+        payer = voter_authority,
+        associated_token::authority = voter_authority,
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
     pub deposit_mint: Account<'info, Mint>,
     #[account(
         mut,
@@ -153,7 +153,7 @@ impl<'info> UpdateDeposit<'info> {
         let accounts = token::Transfer {
             from: self.deposit_token.to_account_info(),
             to: self.exchange_vault.to_account_info(),
-            authority: self.authority.to_account_info(),
+            authority: self.voter_authority.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }
@@ -192,7 +192,7 @@ impl<'info> UpdateDeposit<'info> {
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
-    #[account(mut, has_one = registrar, has_one = authority)]
+    #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
     pub token_owner_record: AccountInfo<'info>,
     #[account(
@@ -204,7 +204,7 @@ pub struct Withdraw<'info> {
     pub withdraw_mint: Account<'info, Mint>,
     #[account(
         mut,
-        associated_token::authority = authority,
+        associated_token::authority = voter_authority,
         associated_token::mint = voting_mint,
     )]
     pub voting_token: Account<'info, TokenAccount>,
@@ -216,7 +216,7 @@ pub struct Withdraw<'info> {
     pub voting_mint: Account<'info, Mint>,
     #[account(mut)]
     pub destination: Account<'info, TokenAccount>,
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -246,7 +246,7 @@ impl<'info> Withdraw<'info> {
         let accounts = token::Burn {
             mint: self.voting_mint.to_account_info(),
             to: self.voting_token.to_account_info(),
-            authority: self.authority.to_account_info(),
+            authority: self.voter_authority.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }
@@ -264,17 +264,17 @@ impl<'info> Withdraw<'info> {
 
 #[derive(Accounts)]
 pub struct CloseDeposit<'info> {
-    #[account(mut, has_one = authority)]
+    #[account(mut, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateSchedule<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
-    #[account(mut, has_one = authority, has_one = registrar)]
+    #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -282,18 +282,18 @@ pub struct UpdateVoterWeightRecord<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
     #[account(
         has_one = registrar,
-        has_one = authority,
+        has_one = voter_authority,
     )]
     pub voter: AccountLoader<'info, Voter>,
     #[account(
         mut,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), authority.key().as_ref()],
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
         bump = voter.load()?.voter_weight_record_bump,
         constraint = voter_weight_record.realm == registrar.load()?.realm,
-        constraint = voter_weight_record.governing_token_owner == voter.load()?.authority,
+        constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -308,16 +308,16 @@ pub struct UpdateMaxVoteWeight<'info> {
 
 #[derive(Accounts)]
 pub struct CloseVoter<'info> {
-    #[account(mut, has_one = authority, close = sol_destination)]
+    #[account(mut, has_one = voter_authority, close = sol_destination)]
     pub voter: AccountLoader<'info, Voter>,
-    pub authority: Signer<'info>,
+    pub voter_authority: Signer<'info>,
     pub sol_destination: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 #[instruction(time_offset: i64)]
 pub struct SetTimeOffset<'info> {
-    #[account(mut, has_one = authority)]
+    #[account(mut, has_one = registrar_authority)]
     pub registrar: AccountLoader<'info, Registrar>,
-    pub authority: Signer<'info>,
+    pub registrar_authority: Signer<'info>,
 }

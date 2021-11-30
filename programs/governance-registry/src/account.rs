@@ -36,7 +36,7 @@ pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
 #[account(zero_copy)]
 pub struct Registrar {
     pub governance_program_id: Pubkey,
-    pub authority: Pubkey,
+    pub registrar_authority: Pubkey,
     pub realm: Pubkey,
     pub realm_community_mint: Pubkey,
     pub bump: u8,
@@ -81,7 +81,7 @@ impl Registrar {
 /// User account for minting voting rights.
 #[account(zero_copy)]
 pub struct Voter {
-    pub authority: Pubkey,
+    pub voter_authority: Pubkey,
     pub registrar: Pubkey,
     pub voter_bump: u8,
     pub voter_weight_record_bump: u8,

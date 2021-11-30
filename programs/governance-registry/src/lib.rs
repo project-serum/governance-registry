@@ -76,7 +76,7 @@ pub mod governance_registry {
         registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
-        registrar.authority = ctx.accounts.authority.key();
+        registrar.registrar_authority = ctx.accounts.registrar_authority.key();
         registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
 
@@ -132,14 +132,14 @@ pub mod governance_registry {
         // Init the voter.
         voter.voter_bump = voter_bump;
         voter.voter_weight_record_bump = voter_weight_record_bump;
-        voter.authority = ctx.accounts.authority.key();
+        voter.voter_authority = ctx.accounts.voter_authority.key();
         voter.registrar = ctx.accounts.registrar.key();
 
         // Init the voter weight record.
         voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
         voter_weight_record.realm = registrar.realm;
         voter_weight_record.governing_token_mint = registrar.realm_community_mint;
-        voter_weight_record.governing_token_owner = ctx.accounts.authority.key();
+        voter_weight_record.governing_token_owner = ctx.accounts.voter_authority.key();
 
         Ok(())
     }
@@ -280,7 +280,7 @@ pub mod governance_registry {
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
 
         // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner = ctx.accounts.authority.key();
+        let token_owner = ctx.accounts.voter_authority.key();
         let token_owner_record_address_seeds =
             token_owner_record::get_token_owner_record_address_seeds(
                 &registrar.realm,
