@@ -416,9 +416,10 @@ impl AddinCookie {
         authority: &Keypair,
         deposit_id: u8,
     ) -> Result<(), TransportError> {
-        let data = anchor_lang::InstructionData::data(
-            &governance_registry::instruction::CloseDeposit { deposit_id },
-        );
+        let data =
+            anchor_lang::InstructionData::data(&governance_registry::instruction::CloseDeposit {
+                deposit_id,
+            });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
             &governance_registry::accounts::CloseDeposit {

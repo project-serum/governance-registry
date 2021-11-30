@@ -195,9 +195,18 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_withdraw2.deposit, 0);
 
     // Close the empty deposit (closing deposits 1 and 2 fails)
-    addin.close_deposit(&voter, &voter_authority, 2).await.expect_err("deposit not in use");
-    addin.close_deposit(&voter, &voter_authority, 1).await.expect_err("deposit not empty");
-    addin.close_deposit(&voter, &voter_authority, 0).await.unwrap();
+    addin
+        .close_deposit(&voter, &voter_authority, 2)
+        .await
+        .expect_err("deposit not in use");
+    addin
+        .close_deposit(&voter, &voter_authority, 1)
+        .await
+        .expect_err("deposit not empty");
+    addin
+        .close_deposit(&voter, &voter_authority, 0)
+        .await
+        .unwrap();
 
     let after_close = get_balances(0).await;
     assert_eq!(initial.token, after_close.token + after_close.vault);

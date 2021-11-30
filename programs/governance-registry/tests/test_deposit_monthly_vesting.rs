@@ -228,7 +228,10 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 1000);
 
     // cannot close yet, has funds
-    addin.close_deposit(&voter, &voter_authority, 0).await.expect_err("deposit not empty");
+    addin
+        .close_deposit(&voter, &voter_authority, 0)
+        .await
+        .expect_err("deposit not empty");
 
     withdraw(1000).await.unwrap();
 
@@ -238,7 +241,10 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.vault, 0);
     assert_eq!(after_withdraw.deposit, 0);
 
-    addin.close_deposit(&voter, &voter_authority, 0).await.unwrap();
+    addin
+        .close_deposit(&voter, &voter_authority, 0)
+        .await
+        .unwrap();
 
     Ok(())
 }

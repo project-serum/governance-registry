@@ -323,7 +323,8 @@ impl DepositEntry {
                 // Ok to divide by two here because, if n is zero, then the
                 // voting power is zero. And if n is one or above, then the
                 // numerator is 2 or above.
-                periods_left.checked_mul(periods_left.checked_add(1).unwrap())
+                periods_left
+                    .checked_mul(periods_left.checked_add(1).unwrap())
                     .unwrap()
                     .checked_div(2)
                     .unwrap(),

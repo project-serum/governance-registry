@@ -389,7 +389,10 @@ pub mod governance_registry {
 
         // The lockup period can only be increased.
         let curr_ts = registrar.clock_unix_timestamp();
-        require!(periods as u64 >= d.lockup.periods_left(curr_ts)?, InvalidDays);
+        require!(
+            periods as u64 >= d.lockup.periods_left(curr_ts)?,
+            InvalidDays
+        );
 
         // TODO: Check for correctness
         d.amount_initially_locked_native = d.amount_deposited_native;
