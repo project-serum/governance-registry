@@ -37,6 +37,8 @@ pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
 pub struct Registrar {
     pub governance_program_id: Pubkey,
     pub registrar_authority: Pubkey,
+    // Token account where tokens should be withdrawn to in case of clawback
+    pub registrar_authority_token: Pubkey,
     pub realm: Pubkey,
     pub realm_community_mint: Pubkey,
     pub bump: u8,

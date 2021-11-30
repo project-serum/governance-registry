@@ -29,6 +29,7 @@ pub struct CreateRegistrar<'info> {
     pub realm_community_mint: Account<'info, Mint>,
     // TODO: can't this be the realm?
     pub registrar_authority: UncheckedAccount<'info>,
+    pub registrar_authority_token: Account<'info, TokenAccount>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
