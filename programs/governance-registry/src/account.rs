@@ -358,15 +358,11 @@ impl DepositEntry {
             return Ok(self.amount_initially_locked_native);
         }
         match self.lockup.kind {
-            LockupKind::None => self.lockup_none(),
+            LockupKind::None => Ok(self.amount_initially_locked_native),
             LockupKind::Daily => self.vested_linearly(curr_ts),
             LockupKind::Monthly => self.vested_linearly(curr_ts),
-            LockupKind::Cliff => self.vested_cliff(curr_ts),
+            LockupKind::Cliff => Ok(0),
         }
-    }
-
-    fn lockup_none(&self) -> Result<u64> {
-        Ok(self.amount_initially_locked_native)
     }
 
     fn vested_linearly(&self, curr_ts: i64) -> Result<u64> {
@@ -382,13 +378,6 @@ impl DepositEntry {
             .checked_div(periods_total)
             .unwrap();
         Ok(vested)
-    }
-
-    fn vested_cliff(&self, curr_ts: i64) -> Result<u64> {
-        if curr_ts < self.lockup.end_ts {
-            return Ok(0);
-        }
-        Ok(self.amount_initially_locked_native)
     }
 
     /// Returns the amount that may be withdrawn given current vesting
