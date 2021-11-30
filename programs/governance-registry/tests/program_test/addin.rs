@@ -230,13 +230,13 @@ impl AddinCookie {
         token_address: Pubkey,
         lockup_kind: governance_registry::account::LockupKind,
         amount: u64,
-        days: i32,
+        periods: i32,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&governance_registry::instruction::CreateDeposit {
                 kind: lockup_kind,
                 amount,
-                days,
+                periods,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(

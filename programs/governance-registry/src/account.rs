@@ -19,13 +19,13 @@ pub const SECS_PER_DAY: i64 = 86_400;
 #[cfg(feature = "localnet")]
 pub const SECS_PER_MONTH: i64 = 10;
 #[cfg(not(feature = "localnet"))]
-pub const SECS_PER_MONTH: i64 = 86_400 * 30;
+pub const SECS_PER_MONTH: i64 = 365 * SECS_PER_DAY / 12;
 
 /// Maximum number of days one can lock for.
-pub const MAX_DAYS_LOCKED: u64 = 2555;
+pub const MAX_DAYS_LOCKED: u64 = 7 * 365;
 
 /// Maximum number of months one can lock for.
-pub const MAX_MONTHS_LOCKED: u64 = 2555;
+pub const MAX_MONTHS_LOCKED: u64 = 7 * 12;
 
 /// Vote weight is amount * FIXED_VOTE_WEIGHT_FACTOR +
 /// LOCKING_VOTE_WEIGHT_FACTOR * amount * time / max time
@@ -295,71 +295,41 @@ impl DepositEntry {
         }
         match self.lockup.kind {
             LockupKind::None => Ok(0),
-            LockupKind::Daily => self.voting_power_daily(curr_ts, max_contribution),
-            LockupKind::Monthly => self.voting_power_monthly(curr_ts, max_contribution),
+            LockupKind::Daily => self.voting_power_linear_vesting(curr_ts, max_contribution),
+            LockupKind::Monthly => self.voting_power_linear_vesting(curr_ts, max_contribution),
             LockupKind::Cliff => self.voting_power_cliff(curr_ts, max_contribution),
         }
     }
 
-    fn voting_power_daily(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
-        let m = MAX_DAYS_LOCKED;
-        let n = self.lockup.days_left(curr_ts)?;
-        let days_total = self.lockup.days_total()?;
+    fn voting_power_linear_vesting(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
+        let max_periods = self.lockup.kind.max_periods();
+        let periods_left = self.lockup.periods_left(curr_ts)?;
+        let periods_total = self.lockup.periods_total()?;
 
-        if n == 0 {
+        if periods_left == 0 {
             return Ok(0);
         }
 
         // TODO: Switch the decay interval to be seconds, not days. That means each
-        // of the daily cliff-locked deposits here will decay in vote power over the
-        // day. That complicates the computaton here, but makes it easier to do
-        // the right thing for monthly vesting too.
+        // of the period cliff-locked deposits here will decay in vote power over the
+        // period. That complicates the computaton here, but makes it easier to do
+        // the right thing if the period_secs() aren't a multiple of a day.
         //
         // This computes
-        // amount / days_total * (1 + 2 + ... + n) / m
+        // amount / periods_total * (1 + 2 + ... + periods_left) / max_periods
         // See the comment on voting_power().
         let decayed_vote_weight = max_contribution
             .checked_mul(
                 // Ok to divide by two here because, if n is zero, then the
                 // voting power is zero. And if n is one or above, then the
                 // numerator is 2 or above.
-                n.checked_mul(n.checked_add(1).unwrap())
+                periods_left.checked_mul(periods_left.checked_add(1).unwrap())
                     .unwrap()
                     .checked_div(2)
                     .unwrap(),
             )
             .unwrap()
-            .checked_div(m.checked_mul(days_total).unwrap())
-            .unwrap();
-
-        Ok(decayed_vote_weight)
-    }
-
-    fn voting_power_monthly(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
-        let m = MAX_MONTHS_LOCKED;
-        let n = self.lockup.months_left(curr_ts)?;
-        let months_total = self.lockup.months_total()?;
-
-        if n == 0 {
-            return Ok(0);
-        }
-
-        // TODO: This is wrong because it does not handle vote decay during a month.
-        // Desire: A one-month monthly vested deposit should be equivalent to a
-        // one-month cliff-locked deposit. Fixing this will be easier once the
-        // decay interval is switched to seconds.
-        let decayed_vote_weight = max_contribution
-            .checked_mul(
-                // Ok to divide by two here because, if n is zero, then the
-                // voting power is zero. And if n is one or above, then the
-                // numerator is 2 or above.
-                n.checked_mul(n.checked_add(1).unwrap())
-                    .unwrap()
-                    .checked_div(2)
-                    .unwrap(),
-            )
-            .unwrap()
-            .checked_div(m.checked_mul(months_total).unwrap())
+            .checked_div(max_periods.checked_mul(periods_total).unwrap())
             .unwrap();
 
         Ok(decayed_vote_weight)
@@ -369,10 +339,10 @@ impl DepositEntry {
         // TODO: Decay by the second, not by the day.
         let decayed_voting_weight = self
             .lockup
-            .days_left(curr_ts)?
+            .periods_left(curr_ts)?
             .checked_mul(max_contribution)
             .unwrap()
-            .checked_div(MAX_DAYS_LOCKED)
+            .checked_div(self.lockup.kind.max_periods())
             .unwrap();
 
         Ok(decayed_voting_weight)
@@ -389,8 +359,8 @@ impl DepositEntry {
         }
         match self.lockup.kind {
             LockupKind::None => self.lockup_none(),
-            LockupKind::Daily => self.vested_daily(curr_ts),
-            LockupKind::Monthly => self.vested_monthly(curr_ts),
+            LockupKind::Daily => self.vested_linearly(curr_ts),
+            LockupKind::Monthly => self.vested_linearly(curr_ts),
             LockupKind::Cliff => self.vested_cliff(curr_ts),
         }
     }
@@ -399,32 +369,17 @@ impl DepositEntry {
         Ok(self.amount_initially_locked_native)
     }
 
-    fn vested_daily(&self, curr_ts: i64) -> Result<u64> {
-        let day_current = self.lockup.day_current(curr_ts)?;
-        let days_total = self.lockup.days_total()?;
-        if day_current >= days_total {
+    fn vested_linearly(&self, curr_ts: i64) -> Result<u64> {
+        let period_current = self.lockup.period_current(curr_ts)?;
+        let periods_total = self.lockup.periods_total()?;
+        if period_current >= periods_total {
             return Ok(self.amount_initially_locked_native);
         }
         let vested = self
             .amount_initially_locked_native
-            .checked_mul(day_current)
+            .checked_mul(period_current)
             .unwrap()
-            .checked_div(days_total)
-            .unwrap();
-        Ok(vested)
-    }
-
-    fn vested_monthly(&self, curr_ts: i64) -> Result<u64> {
-        let month_current = self.lockup.month_current(curr_ts)?;
-        let months_total = self.lockup.months_total()?;
-        if month_current >= months_total {
-            return Ok(self.amount_initially_locked_native);
-        }
-        let vested = self
-            .amount_initially_locked_native
-            .checked_mul(month_current)
-            .unwrap()
-            .checked_div(months_total)
+            .checked_div(periods_total)
             .unwrap();
         Ok(vested)
     }
@@ -463,63 +418,40 @@ pub struct Lockup {
 }
 
 impl Lockup {
-    /// Returns the number of days left on the lockup.
-    pub fn days_left(&self, curr_ts: i64) -> Result<u64> {
+    /// Returns the number of periods left on the lockup.
+    pub fn periods_left(&self, curr_ts: i64) -> Result<u64> {
         Ok(self
-            .days_total()?
-            .saturating_sub(self.day_current(curr_ts)?))
+            .periods_total()?
+            .saturating_sub(self.period_current(curr_ts)?))
     }
 
-    /// Returns the current day in the vesting schedule.
-    pub fn day_current(&self, curr_ts: i64) -> Result<u64> {
+    /// Returns the current period in the vesting schedule.
+    pub fn period_current(&self, curr_ts: i64) -> Result<u64> {
+        let period_secs = self.kind.period_secs();
+        if period_secs == 0 {
+            return Ok(0);
+        }
         let d = u64::try_from({
             let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
-            secs_elapsed.checked_div(SECS_PER_DAY).unwrap()
+            secs_elapsed.checked_div(period_secs).unwrap()
         })
         .map_err(|_| ErrorCode::UnableToConvert)?;
         Ok(d)
     }
 
-    /// Returns the total amount of days in the lockup period.
-    pub fn days_total(&self) -> Result<u64> {
+    /// Returns the total amount of periods in the lockup period.
+    pub fn periods_total(&self) -> Result<u64> {
+        let period_secs = self.kind.period_secs();
+        if period_secs == 0 {
+            return Ok(0);
+        }
+
         // Number of seconds in the entire lockup.
         let lockup_secs = self.end_ts.checked_sub(self.start_ts).unwrap();
-        require!(lockup_secs % SECS_PER_DAY == 0, InvalidLockupPeriod);
+        require!(lockup_secs % period_secs == 0, InvalidLockupPeriod);
 
-        // Total days in the entire lockup.
-        let lockup_days = u64::try_from(lockup_secs.checked_div(SECS_PER_DAY).unwrap()).unwrap();
-
-        Ok(lockup_days)
-    }
-
-    /// Returns the number of months left on the lockup.
-    pub fn months_left(&self, curr_ts: i64) -> Result<u64> {
-        Ok(self
-            .months_total()?
-            .saturating_sub(self.month_current(curr_ts)?))
-    }
-
-    /// Returns the current month in the vesting schedule.
-    pub fn month_current(&self, curr_ts: i64) -> Result<u64> {
-        let d = u64::try_from({
-            let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
-            secs_elapsed.checked_div(SECS_PER_MONTH).unwrap()
-        })
-        .map_err(|_| ErrorCode::UnableToConvert)?;
-        Ok(d)
-    }
-
-    /// Returns the total amount of months in the lockup period.
-    pub fn months_total(&self) -> Result<u64> {
-        // Number of seconds in the entire lockup.
-        let lockup_secs = self.end_ts.checked_sub(self.start_ts).unwrap();
-        require!(lockup_secs % SECS_PER_MONTH == 0, InvalidLockupPeriod);
-
-        // Total months in the entire lockup.
-        let lockup_months =
-            u64::try_from(lockup_secs.checked_div(SECS_PER_MONTH).unwrap()).unwrap();
-
-        Ok(lockup_months)
+        // Total periods in the entire lockup.
+        Ok(u64::try_from(lockup_secs.checked_div(period_secs).unwrap()).unwrap())
     }
 }
 
@@ -530,6 +462,26 @@ pub enum LockupKind {
     Daily,
     Monthly,
     Cliff,
+}
+
+impl LockupKind {
+    pub fn period_secs(&self) -> i64 {
+        match self {
+            LockupKind::None => 0,
+            LockupKind::Daily => SECS_PER_DAY,
+            LockupKind::Monthly => SECS_PER_MONTH,
+            LockupKind::Cliff => SECS_PER_DAY, // arbitrary choice
+        }
+    }
+
+    pub fn max_periods(&self) -> u64 {
+        match self {
+            LockupKind::None => 0,
+            LockupKind::Daily => MAX_DAYS_LOCKED,
+            LockupKind::Monthly => MAX_MONTHS_LOCKED,
+            LockupKind::Cliff => MAX_DAYS_LOCKED,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1002,7 +954,7 @@ mod tests {
             end_ts,
             padding: [0u8; 16],
         };
-        let days_left = l.days_left(curr_ts)?;
+        let days_left = l.periods_left(curr_ts)?;
         assert_eq!(days_left, t.expected_days_left);
         Ok(())
     }
@@ -1017,7 +969,7 @@ mod tests {
             end_ts,
             padding: [0u8; 16],
         };
-        let months_left = l.months_left(curr_ts)?;
+        let months_left = l.periods_left(curr_ts)?;
         assert_eq!(months_left, t.expected_months_left);
         Ok(())
     }
@@ -1044,12 +996,12 @@ mod tests {
     }
 
     fn days_to_secs(days: f64) -> i64 {
-        let d = 86_400. * days;
+        let d = (SECS_PER_DAY as f64) * days;
         d.round() as i64
     }
 
     fn months_to_secs(months: f64) -> i64 {
-        let d = 86_400. * 30. * months;
+        let d = (SECS_PER_MONTH as f64) * months;
         d.round() as i64
     }
 

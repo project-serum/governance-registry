@@ -149,7 +149,7 @@ pub mod governance_registry {
         ctx: Context<CreateDeposit>,
         kind: LockupKind,
         amount: u64,
-        days: i32,
+        periods: i32,
     ) -> Result<()> {
         // Creates the new deposit.
         let deposit_id = {
@@ -183,7 +183,7 @@ pub mod governance_registry {
                 kind,
                 start_ts,
                 end_ts: start_ts
-                    .checked_add(i64::from(days).checked_mul(SECS_PER_DAY).unwrap())
+                    .checked_add(i64::from(periods).checked_mul(kind.period_secs()).unwrap())
                     .unwrap(),
                 padding: [0u8; 16],
             };
@@ -234,9 +234,9 @@ pub mod governance_registry {
             .lockup
             .start_ts
             .checked_add(
-                i64::try_from(d_entry.lockup.day_current(curr_ts)?)
+                i64::try_from(d_entry.lockup.period_current(curr_ts)?)
                     .unwrap()
-                    .checked_mul(SECS_PER_DAY)
+                    .checked_mul(d_entry.lockup.kind.period_secs())
                     .unwrap(),
             )
             .unwrap();
@@ -360,8 +360,9 @@ pub mod governance_registry {
     }
 
     /// Resets a lockup to start at the current slot timestamp and to last for
-    /// `days`, which must be longer than the number of days left on the lockup.
-    pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, days: i64) -> Result<()> {
+    /// `periods`, which must be >= the number of periods left on the lockup.
+    /// This will re-lock any non-withdrawn vested funds.
+    pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, periods: i64) -> Result<()> {
         let registrar = ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
@@ -371,14 +372,15 @@ pub mod governance_registry {
 
         // The lockup period can only be increased.
         let curr_ts = registrar.clock_unix_timestamp();
-        require!(days as u64 > d.lockup.days_left(curr_ts)?, InvalidDays);
+        require!(periods as u64 >= d.lockup.periods_left(curr_ts)?, InvalidDays);
 
-        let end_ts = curr_ts
-            .checked_add(days.checked_mul(SECS_PER_DAY).unwrap())
-            .unwrap();
+        // TODO: Check for correctness
+        d.amount_initially_locked_native = d.amount_deposited_native;
 
         d.lockup.start_ts = curr_ts;
-        d.lockup.end_ts = end_ts;
+        d.lockup.end_ts = curr_ts
+            .checked_add(periods.checked_mul(d.lockup.kind.period_secs()).unwrap())
+            .unwrap();
 
         Ok(())
     }
