@@ -226,5 +226,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.vault, 0);
     assert_eq!(after_withdraw.deposit, 0);
 
+    addin.close_deposit(&voter, &voter_authority, 0).await.unwrap();
+
     Ok(())
 }

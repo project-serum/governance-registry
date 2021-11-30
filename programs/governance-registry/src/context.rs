@@ -263,9 +263,16 @@ impl<'info> Withdraw<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CloseDeposit<'info> {
+    #[account(mut, has_one = authority)]
+    pub voter: AccountLoader<'info, Voter>,
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
 pub struct UpdateSchedule<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
-    #[account(mut, has_one = authority)]
+    #[account(mut, has_one = authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
     pub authority: Signer<'info>,
 }

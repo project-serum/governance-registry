@@ -217,6 +217,7 @@ pub mod governance_registry {
 
         require!(voter.deposits.len() > id as usize, InvalidDepositId);
         let d_entry = &mut voter.deposits[id as usize];
+        require!(d_entry.is_used, InvalidDepositId);
 
         // Deposit tokens into the registrar.
         token::transfer(ctx.accounts.transfer_ctx(), amount)?;
@@ -356,6 +357,22 @@ pub mod governance_registry {
                 .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
         )?;
 
+        Ok(())
+    }
+
+    /// Close an empty deposit, allowing it to be reused in the future
+    pub fn close_deposit(ctx: Context<CloseDeposit>, deposit_id: u8) -> Result<()> {
+        let voter = &mut ctx.accounts.voter.load_mut()?;
+
+        require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
+        let d = &mut voter.deposits[deposit_id as usize];
+        require!(d.is_used, InvalidDepositId);
+        require!(d.amount_deposited_native == 0, VotingTokenNonZero);
+
+        // We do not need to check d.amount_initially_locked_native or d.lockup
+        // here - the fact that the deposit contains no tokens is sufficient.
+
+        d.is_used = false;
         Ok(())
     }
 

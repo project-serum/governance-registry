@@ -194,6 +194,17 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_withdraw2.vault, 7000);
     assert_eq!(after_withdraw2.deposit, 0);
 
+    // Close the empty deposit (closing deposits 1 and 2 fails)
+    addin.close_deposit(&voter, &voter_authority, 2).await.expect_err("deposit not in use");
+    addin.close_deposit(&voter, &voter_authority, 1).await.expect_err("deposit not empty");
+    addin.close_deposit(&voter, &voter_authority, 0).await.unwrap();
+
+    let after_close = get_balances(0).await;
+    assert_eq!(initial.token, after_close.token + after_close.vault);
+    assert_eq!(after_close.voter_weight, after_close.vault);
+    assert_eq!(after_close.vault, 7000);
+    assert_eq!(after_close.deposit, 0);
+
     // check that the voter2 account is still at 0
     let voter2_balances = balances(
         &context,
@@ -235,6 +246,27 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(voter2_balances.deposit, 1000);
     assert_eq!(voter2_balances.voter_weight, 1000);
     assert_eq!(voter2_balances.vault, 8000);
+
+    // when voter1 deposits again, they can reuse deposit index 0
+    addin
+        .create_deposit(
+            &registrar,
+            &voter,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            governance_registry::account::LockupKind::Monthly,
+            3000,
+            1,
+        )
+        .await
+        .unwrap();
+
+    let after_reuse = get_balances(0).await;
+    assert_eq!(initial.token, after_reuse.token + 7000 + 3000);
+    assert_eq!(after_reuse.voter_weight, 7000 + 3000);
+    assert_eq!(after_reuse.vault, 8000 + 3000);
+    assert_eq!(after_reuse.deposit, 3000);
 
     Ok(())
 }

@@ -410,6 +410,38 @@ impl AddinCookie {
             .await)
     }
 
+    pub async fn close_deposit(
+        &self,
+        voter: &VoterCookie,
+        authority: &Keypair,
+        deposit_id: u8,
+    ) -> Result<(), TransportError> {
+        let data = anchor_lang::InstructionData::data(
+            &governance_registry::instruction::CloseDeposit { deposit_id },
+        );
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &governance_registry::accounts::CloseDeposit {
+                voter: voter.address,
+                authority: authority.pubkey(),
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await
+    }
+
     pub async fn set_time_offset(
         &self,
         registrar: &RegistrarCookie,
