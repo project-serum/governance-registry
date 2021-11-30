@@ -44,7 +44,7 @@ async fn balances(
 
 #[allow(unaligned_references)]
 #[tokio::test]
-async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
+async fn test_deposit_cliff() -> Result<(), TransportError> {
     let context = TestContext::new().await;
     let addin = &context.addin;
 
@@ -55,6 +55,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
         .create_realm(
             "testrealm",
             realm_authority.pubkey(),
+            context.users[0].token_accounts[0],
             &context.mints[0],
             &payer,
             &context.addin.program_id,
@@ -124,9 +125,9 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             &mngo_rate,
             &voter_authority,
             reference_account,
-            governance_registry::account::LockupKind::Daily,
+            governance_registry::account::LockupKind::Cliff,
             9000,
-            3,
+            3, // days
         )
         .await
         .unwrap();
@@ -140,91 +141,38 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     // cannot withdraw yet, nothing is vested
     withdraw(1).await.expect_err("nothing vested yet");
 
-    // advance a day
+    // advance almost three days
     addin
-        .set_time_offset(&registrar, &realm_authority, 25 * 60 * 60)
+        .set_time_offset(&registrar, &realm_authority, 71 * 60 * 60)
         .await;
     context.solana.advance_clock_by_slots(2).await;
-
-    withdraw(3001).await.expect_err("withdrew too much");
-    withdraw(3000).await.unwrap();
-
-    let after_withdraw = get_balances(0).await;
-    assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
-    assert_eq!(after_withdraw.voter_weight, after_withdraw.vault);
-    assert_eq!(after_withdraw.vault, 6000);
-    assert_eq!(after_withdraw.deposit, 6000);
-
-    // There are two vesting periods left, if we add 5000 to the deposit,
-    // half of that should vest each day.
-    update_deposit(5000).await.unwrap();
-
-    let after_deposit = get_balances(0).await;
-    assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
-    assert_eq!(after_deposit.voter_weight, after_deposit.vault);
-    assert_eq!(after_deposit.vault, 11000);
-    assert_eq!(after_deposit.deposit, 11000);
 
     withdraw(1).await.expect_err("nothing vested yet");
 
-    // advance another day
-    addin
-        .set_time_offset(&registrar, &realm_authority, 49 * 60 * 60)
-        .await;
-    context.solana.advance_clock_by_slots(2).await;
-
-    // There is just one period left, should be fully withdrawable after
+    // deposit some more
     update_deposit(1000).await.unwrap();
 
-    context.solana.advance_clock_by_slots(2).await;
-
-    // can withdraw 3000 (original deposit) plus 2500 (second deposit)
-    // nothing from the third deposit is vested
-    withdraw(5501).await.expect_err("withdrew too much");
-    withdraw(5500).await.unwrap();
-
-    let after_withdraw = get_balances(0).await;
-    assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
-    assert_eq!(after_withdraw.voter_weight, after_withdraw.vault);
-    assert_eq!(after_withdraw.vault, 6500);
-    assert_eq!(after_withdraw.deposit, 6500);
-
-    // advance another day
+    // advance more than three days
     addin
         .set_time_offset(&registrar, &realm_authority, 73 * 60 * 60)
         .await;
     context.solana.advance_clock_by_slots(2).await;
 
-    // can withdraw the rest
-    withdraw(6500).await.unwrap();
+    let after_cliff = get_balances(0).await;
+    assert_eq!(initial.token, after_cliff.token + after_cliff.vault);
+    assert_eq!(after_cliff.voter_weight, after_cliff.vault);
+    assert_eq!(after_cliff.vault, 10000);
+    assert_eq!(after_cliff.deposit, 10000);
+
+    // can withdraw everything now
+    withdraw(10001).await.expect_err("withdrew too much");
+    withdraw(10000).await.unwrap();
 
     let after_withdraw = get_balances(0).await;
     assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
     assert_eq!(after_withdraw.voter_weight, after_withdraw.vault);
     assert_eq!(after_withdraw.vault, 0);
     assert_eq!(after_withdraw.deposit, 0);
-
-    // if we deposit now, we can immediately withdraw
-    update_deposit(1000).await.unwrap();
-
-    let after_deposit = get_balances(0).await;
-    assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
-    assert_eq!(after_deposit.voter_weight, after_deposit.vault);
-    assert_eq!(after_deposit.vault, 1000);
-    assert_eq!(after_deposit.deposit, 1000);
-
-    withdraw(1000).await.unwrap();
-
-    let after_withdraw = get_balances(0).await;
-    assert_eq!(initial.token, after_withdraw.token + after_withdraw.vault);
-    assert_eq!(after_withdraw.voter_weight, after_withdraw.vault);
-    assert_eq!(after_withdraw.vault, 0);
-    assert_eq!(after_withdraw.deposit, 0);
-
-    addin
-        .close_deposit(&voter, &voter_authority, 0)
-        .await
-        .unwrap();
 
     Ok(())
 }

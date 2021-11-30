@@ -75,11 +75,6 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
         .create_voter(&registrar, &voter_authority, &payer)
         .await;
 
-    let voter2_authority = &context.users[2].key;
-    let voter2 = addin
-        .create_voter(&registrar, &voter2_authority, &payer)
-        .await;
-
     let reference_account = context.users[1].token_accounts[0];
     let get_balances = |depot_id| {
         balances(
