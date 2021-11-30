@@ -77,7 +77,6 @@ pub mod governance_registry {
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
         registrar.registrar_authority = ctx.accounts.registrar_authority.key();
-        registrar.registrar_authority_token = ctx.accounts.registrar_authority_token.key();
         registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
 

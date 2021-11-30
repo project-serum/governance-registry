@@ -21,14 +21,12 @@ pub struct CreateRegistrar<'info> {
     )]
     pub registrar: AccountLoader<'info, Registrar>,
     pub registrar_authority: UncheckedAccount<'info>,
-    pub registrar_authority_token: Account<'info, TokenAccount>,
 
     pub governance_program_id: UncheckedAccount<'info>,
     pub realm: UncheckedAccount<'info>,
     pub realm_community_mint: Account<'info, Mint>,
 
     // TODO: Allow registrar creation only for realm_authority!
-
     #[account(mut)]
     pub payer: Signer<'info>,
 

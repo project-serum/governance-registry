@@ -15,7 +15,6 @@ pub struct GovernanceCookie {
 pub struct GovernanceRealmCookie {
     pub governance: GovernanceCookie,
     pub authority: Pubkey,
-    pub authority_token: Pubkey,
     pub realm: Pubkey,
     pub realm_config: Pubkey,
     pub community_token_mint: MintCookie,
@@ -32,7 +31,6 @@ impl GovernanceCookie {
         &self,
         name: &str,
         realm_authority: Pubkey,
-        realm_authority_token: Pubkey,
         community_token_mint: &MintCookie,
         payer: &Keypair,
         voter_weight_addin: &Pubkey,
@@ -79,7 +77,6 @@ impl GovernanceCookie {
         GovernanceRealmCookie {
             governance: self.clone(),
             authority: realm_authority,
-            authority_token: realm_authority_token,
             realm,
             realm_config,
             community_token_mint: community_token_mint.clone(),
