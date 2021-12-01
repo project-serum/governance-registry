@@ -42,4 +42,6 @@ pub enum ErrorCode {
     DebugInstruction,
     #[msg("")]
     ClawbackNotAllowedOnDeposit, // 319
+    #[msg("")]
+    DepositStillLocked, // 320
 }

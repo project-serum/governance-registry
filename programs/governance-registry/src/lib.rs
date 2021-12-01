@@ -439,8 +439,12 @@ pub mod governance_registry {
         require!(d.is_used, InvalidDepositId);
         require!(d.amount_deposited_native == 0, VotingTokenNonZero);
 
-        // We do not need to check d.amount_initially_locked_native or d.lockup
-        // here - the fact that the deposit contains no tokens is sufficient.
+        // Deposits that have clawback enabled are guaranteed to live until the end
+        // of their locking period. That ensures a deposit can't be closed and reopenend
+        // with a different locking kind or locking end time before funds are deposited.
+        if d.allow_clawback {
+            require!(d.lockup.end_ts < Clock::get()?.unix_timestamp, DepositStillLocked);
+        }
 
         d.is_used = false;
         Ok(())
