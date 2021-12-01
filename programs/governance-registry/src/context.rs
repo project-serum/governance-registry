@@ -11,24 +11,28 @@ pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
 #[instruction(vote_weight_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
     /// a voting registrar. There can only be a single registrar
-    /// per governance realm.
+    /// per governance realm and governing mint.
     #[account(
         init,
-        seeds = [realm.key().as_ref()],
+        seeds = [realm.key().as_ref(), b"registrar".as_ref(), realm_governing_token_mint.key().as_ref()],
         bump = registrar_bump,
         payer = payer,
         space = 8 + size_of::<Registrar>()
     )]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: UncheckedAccount<'info>,
+
+    // realm is validated in the instruction:
+    // - realm is owned by the governance_program_id
+    // - realm_governing_token_mint must be the community or council mint
+    // - realm_authority is realm.authority
+    pub realm: UncheckedAccount<'info>,
 
     pub governance_program_id: UncheckedAccount<'info>,
-    pub realm: UncheckedAccount<'info>,
-    pub realm_community_mint: Account<'info, Mint>,
+    pub realm_governing_token_mint: Account<'info, Mint>,
+    pub realm_authority: Signer<'info>,
 
     pub clawback_authority: UncheckedAccount<'info>,
 
-    // TODO: Allow registrar creation only for realm_authority!
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -40,9 +44,9 @@ pub struct CreateRegistrar<'info> {
 #[derive(Accounts)]
 #[instruction(idx: u16, mint: Pubkey, rate: u64, decimals: u8)]
 pub struct CreateExchangeRate<'info> {
-    #[account(mut, has_one = registrar_authority)]
+    #[account(mut, has_one = realm_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: Signer<'info>,
+    pub realm_authority: Signer<'info>,
 
     #[account(
         init,
@@ -69,7 +73,7 @@ pub struct CreateVoter<'info> {
 
     #[account(
         init,
-        seeds = [registrar.key().as_ref(), voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter_bump,
         payer = payer,
         space = 8 + size_of::<Voter>(),
@@ -154,6 +158,12 @@ pub struct WithdrawOrClawback<'info> {
 
     #[account(mut, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
+
+    // token_owner_record is validated in the instruction:
+    // - owned by registrar.governance_program_id
+    // - for the registrar.realm
+    // - for the registrar.realm_governing_token_mint
+    // - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
 
     // The address is verified in the instructions.
@@ -207,19 +217,16 @@ pub struct UpdateSchedule<'info> {
 pub struct UpdateVoterWeightRecord<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
-    #[account(
-        has_one = registrar,
-        has_one = voter_authority,
-    )]
+    #[account(has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-    pub voter_authority: Signer<'info>,
 
     #[account(
         mut,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter.load()?.voter_authority.key().as_ref()],
         bump = voter.load()?.voter_weight_record_bump,
         constraint = voter_weight_record.realm == registrar.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
+        constraint = voter_weight_record.governing_token_mint == registrar.realm_governing_token_mint,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
 
@@ -246,7 +253,7 @@ pub struct CloseVoter<'info> {
 #[derive(Accounts)]
 #[instruction(time_offset: i64)]
 pub struct SetTimeOffset<'info> {
-    #[account(mut, has_one = registrar_authority)]
+    #[account(mut, has_one = realm_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: Signer<'info>,
+    pub realm_authority: Signer<'info>,
 }

@@ -18,7 +18,6 @@ async fn balances(
     registrar: &RegistrarCookie,
     address: Pubkey,
     voter: &VoterCookie,
-    voter_authority: &Keypair,
     rate: &ExchangeRateCookie,
     deposit_id: u8,
 ) -> Balances {
@@ -31,7 +30,7 @@ async fn balances(
     let deposit = voter.deposit_amount(&context.solana, deposit_id).await;
     let vwr = context
         .addin
-        .update_voter_weight_record(&registrar, &voter, &voter_authority)
+        .update_voter_weight_record(&registrar, &voter)
         .await
         .unwrap();
     Balances {
@@ -66,7 +65,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
         .create_token_owner_record(voter_authority.pubkey(), &payer)
         .await;
 
-    let registrar = addin.create_registrar(&realm, payer).await;
+    let registrar = addin.create_registrar(&realm, &realm_authority, payer).await;
     let mngo_rate = addin
         .create_exchange_rate(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
         .await;
@@ -82,7 +81,6 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             &registrar,
             reference_account,
             &voter,
-            &voter_authority,
             &mngo_rate,
             depot_id,
         )

@@ -38,7 +38,7 @@ async fn test_clawback() -> Result<(), TransportError> {
 
     let registrar = context
         .addin
-        .create_registrar(&realm, realm_authority)
+        .create_registrar(&realm, realm_authority, realm_authority)
         .await;
 
     println!("create_exchange_rate");

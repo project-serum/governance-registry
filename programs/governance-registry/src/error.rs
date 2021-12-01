@@ -46,4 +46,8 @@ pub enum ErrorCode {
     DepositStillLocked, // 320
     #[msg("")]
     InvalidAuthority, // 321
+    #[msg("")]
+    InvalidTokenOwnerRecord,
+    #[msg("")]
+    InvalidRealmAuthority,
 }

@@ -5,7 +5,7 @@ use anchor_spl::token::{self, Mint};
 use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
-use spl_governance::state::token_owner_record;
+use spl_governance::state::{realm, token_owner_record};
 use std::{convert::TryFrom, str::FromStr};
 
 mod access_control;
@@ -76,11 +76,23 @@ pub mod governance_registry {
         registrar.bump = registrar_bump;
         registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
-        registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
-        registrar.registrar_authority = ctx.accounts.registrar_authority.key();
+        registrar.realm_governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
+        registrar.realm_authority = ctx.accounts.realm_authority.key();
         registrar.clawback_authority = ctx.accounts.clawback_authority.key();
         registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
+
+        // Verify that "realm_authority" is the expected authority on "realm"
+        // and that the mint matches one of the realm mints too.
+        let realm = realm::get_realm_data_for_governing_token_mint(
+            &registrar.governance_program_id,
+            &ctx.accounts.realm.to_account_info(),
+            &registrar.realm_governing_token_mint,
+        )?;
+        require!(
+            realm.authority.unwrap() == ctx.accounts.realm_authority.key(),
+            ErrorCode::InvalidRealmAuthority
+        );
 
         Ok(())
     }
@@ -142,7 +154,7 @@ pub mod governance_registry {
         // Init the voter weight record.
         voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
         voter_weight_record.realm = registrar.realm;
-        voter_weight_record.governing_token_mint = registrar.realm_community_mint;
+        voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
         voter_weight_record.governing_token_owner = ctx.accounts.voter_authority.key();
 
         Ok(())
@@ -282,10 +294,11 @@ pub mod governance_registry {
         );
 
         // Transfer the tokens to withdraw.
+        let registrar_seeds = registrar_seeds!(registrar);
         token::transfer(
             ctx.accounts
                 .transfer_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+                .with_signer(&[registrar_seeds]),
             amount_not_yet_vested,
         )?;
 
@@ -309,18 +322,18 @@ pub mod governance_registry {
         require!(ctx.accounts.authority.key() == voter.voter_authority, InvalidAuthority);
 
         // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner = voter.voter_authority;
-        let token_owner_record_address_seeds =
-            token_owner_record::get_token_owner_record_address_seeds(
+        let token_owner_record_data =
+            token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
+                &registrar.governance_program_id,
+                &ctx.accounts.token_owner_record.to_account_info(),
                 &registrar.realm,
-                &registrar.realm_community_mint,
-                &token_owner,
-            );
-        let token_owner_record_data = token_owner_record::get_token_owner_record_data_for_seeds(
-            &registrar.governance_program_id,
-            &ctx.accounts.token_owner_record.to_account_info(),
-            &token_owner_record_address_seeds,
-        )?;
+                &registrar.realm_governing_token_mint,
+            )?;
+        let token_owner = voter.voter_authority;
+        require!(
+            token_owner_record_data.governing_token_owner == token_owner,
+            InvalidTokenOwnerRecord
+        );
         token_owner_record_data.assert_can_withdraw_governing_tokens()?;
 
         // Must not withdraw in the same slot as depositing, to prevent people
@@ -361,10 +374,9 @@ pub mod governance_registry {
         deposit_entry.amount_deposited_native -= amount;
 
         // Transfer the tokens to withdraw.
+        let registrar_seeds = registrar_seeds!(registrar);
         token::transfer(
-            ctx.accounts
-                .transfer_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+            ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
             amount,
         )?;
 
