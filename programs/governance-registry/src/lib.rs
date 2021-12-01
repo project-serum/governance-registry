@@ -265,8 +265,6 @@ pub mod governance_registry {
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
         require!(ctx.accounts.authority.key() == registrar.clawback_authority, InvalidAuthority);
 
-        // TODO: verify that the destination is owned by the realm and its governance
-
         // Get the deposit being withdrawn from.
         let curr_ts = registrar.clock_unix_timestamp();
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
