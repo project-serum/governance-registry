@@ -281,12 +281,13 @@ pub mod governance_registry {
         Ok(())
     }
 
-    pub fn clawback(ctx: Context<Withdraw>, deposit_id: u8) -> Result<()> {
+    pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_id: u8) -> Result<()> {
         msg!("--------clawback--------");
         // Load the accounts.
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
+        require!(ctx.accounts.authority.key() == registrar.clawback_authority, InvalidAuthority);
 
         // TODO: verify that the destination is owned by the realm and its governance
 
@@ -342,12 +343,13 @@ pub mod governance_registry {
     /// to a vesting schedule.
     ///
     /// `amount` is in units of the native currency being withdrawn.
-    pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
+    pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -> Result<()> {
         msg!("--------withdraw--------");
         // Load the accounts.
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
+        require!(ctx.accounts.authority.key() == voter.voter_authority, InvalidAuthority);
 
         // Governance may forbid withdraws, for example when engaged in a vote.
         let token_owner = ctx.accounts.voter_authority.key();

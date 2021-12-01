@@ -133,6 +133,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &token_owner_record,
             &mngo_rate,
             &voter_authority,
+            &realm_authority,
             realm_authority_ata,
             0,
         )

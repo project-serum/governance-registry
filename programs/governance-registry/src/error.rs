@@ -44,4 +44,6 @@ pub enum ErrorCode {
     ClawbackNotAllowedOnDeposit, // 319
     #[msg("")]
     DepositStillLocked, // 320
+    #[msg("")]
+    InvalidAuthority, // 321
 }

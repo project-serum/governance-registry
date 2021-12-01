@@ -336,7 +336,8 @@ impl AddinCookie {
         voter: &VoterCookie,
         token_owner_record: &TokenOwnerRecordCookie,
         exchange_rate: &ExchangeRateCookie,
-        authority: &Keypair,
+        voter_authority: &Keypair,
+        clawback_authority: &Keypair,
         token_address: Pubkey,
         deposit_id: u8,
     ) -> std::result::Result<(), TransportError> {
@@ -346,7 +347,7 @@ impl AddinCookie {
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::Withdraw {
+            &governance_registry::accounts::WithdrawOrClawback {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
@@ -355,7 +356,8 @@ impl AddinCookie {
                 voting_token: voter.voting_token(exchange_rate),
                 voting_mint: exchange_rate.voting_mint,
                 destination: token_address,
-                voter_authority: authority.pubkey(),
+                voter_authority: voter_authority.pubkey(),
+                authority: clawback_authority.pubkey(),
                 token_program: spl_token::id(),
             },
             None,
@@ -368,7 +370,7 @@ impl AddinCookie {
         }];
 
         // clone the secrets
-        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+        let signer = Keypair::from_base58_string(&clawback_authority.to_base58_string());
 
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
@@ -393,7 +395,7 @@ impl AddinCookie {
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::Withdraw {
+            &governance_registry::accounts::WithdrawOrClawback {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
@@ -403,6 +405,7 @@ impl AddinCookie {
                 voting_mint: exchange_rate.voting_mint,
                 destination: token_address,
                 voter_authority: authority.pubkey(),
+                authority: authority.pubkey(),
                 token_program: spl_token::id(),
             },
             None,

@@ -207,42 +207,47 @@ impl<'info> UpdateDeposit<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Withdraw<'info> {
+pub struct WithdrawOrClawback<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
-    pub voter_authority: Signer<'info>,
+    pub voter_authority: UncheckedAccount<'info>, // only needed for voting_token
     pub token_owner_record: UncheckedAccount<'info>,
+
+    // The address is verified in the instructions.
+    // For withdraw: must be voter_authority
+    // For clawback: must be registrar.clawback_authority
+    pub authority: Signer<'info>,
 
     #[account(
         mut,
         associated_token::authority = registrar,
         associated_token::mint = withdraw_mint,
     )]
-    pub exchange_vault: Account<'info, TokenAccount>,
-    pub withdraw_mint: Account<'info, Mint>,
+    pub exchange_vault: Box<Account<'info, TokenAccount>>,
+    pub withdraw_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
-    pub destination: Account<'info, TokenAccount>,
+    pub destination: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::authority = voter_authority,
         associated_token::mint = voting_mint,
     )]
-    pub voting_token: Account<'info, TokenAccount>,
+    pub voting_token: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), withdraw_mint.key().as_ref()],
         bump,
     )]
-    pub voting_mint: Account<'info, Mint>,
+    pub voting_mint: Box<Account<'info, Mint>>,
 
     pub token_program: Program<'info, Token>,
 }
 
-impl<'info> Withdraw<'info> {
+impl<'info> WithdrawOrClawback<'info> {
     pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
         let program = self.token_program.to_account_info();
         let accounts = token::Transfer {
