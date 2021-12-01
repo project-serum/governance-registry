@@ -288,29 +288,6 @@ pub mod governance_registry {
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
 
-        // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner = ctx.accounts.voter_authority.key();
-        let token_owner_record_address_seeds =
-            token_owner_record::get_token_owner_record_address_seeds(
-                &registrar.realm,
-                &registrar.realm_community_mint,
-                &token_owner,
-            );
-        let token_owner_record_data = token_owner_record::get_token_owner_record_data_for_seeds(
-            &registrar.governance_program_id,
-            &ctx.accounts.token_owner_record.to_account_info(),
-            &token_owner_record_address_seeds,
-        )?;
-        token_owner_record_data.assert_can_withdraw_governing_tokens()?;
-
-        // Must not withdraw in the same slot as depositing, to prevent people
-        // depositing, having the vote weight updated, withdrawing and then
-        // voting.
-        require!(
-            voter.last_deposit_slot < Clock::get()?.slot,
-            ErrorCode::InvalidToDepositAndWithdrawInOneSlot
-        );
-
         // TODO: verify that the destination is owned by the realm and its governance
 
         // Get the deposit being withdrawn from.
