@@ -124,6 +124,21 @@ async fn test_clawback() -> Result<(), TransportError> {
         .await;
     context.solana.advance_clock_by_slots(2).await;
 
+    println!("withdraw");
+    context
+        .addin
+        .withdraw(
+            &registrar,
+            &voter,
+            &token_owner_record,
+            &mngo_rate,
+            &voter_authority,
+            voter_authority_ata,
+            0,
+            999,
+        )
+        .await?;
+
     println!("clawback");
     context
         .addin
@@ -149,7 +164,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &voter_authority,
             voter_authority_ata,
             0,
-            2000,
+            1001,
         )
         .await?;
 
