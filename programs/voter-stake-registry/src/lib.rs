@@ -284,12 +284,12 @@ pub mod voter_stake_registry {
             deposit_entry.allow_clawback,
             ErrorCode::ClawbackNotAllowedOnDeposit
         );
-        let amount_not_yet_vested =
+        let unvested_amount =
             deposit_entry.amount_initially_locked_native - deposit_entry.vested(curr_ts).unwrap();
 
         // sanity check only
         require!(
-            deposit_entry.amount_deposited_native >= amount_not_yet_vested,
+            deposit_entry.amount_deposited_native >= unvested_amount,
             InsufficientVestedTokens
         );
 
@@ -297,11 +297,11 @@ pub mod voter_stake_registry {
         let registrar_seeds = registrar_seeds!(registrar);
         token::transfer(
             ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
-            amount_not_yet_vested,
+            unvested_amount,
         )?;
 
         // Update deposit book keeping.
-        deposit_entry.amount_deposited_native -= amount_not_yet_vested;
+        deposit_entry.amount_deposited_native -= unvested_amount;
 
         // Now that all locked funds are withdrawn, end the lockup
         deposit_entry.amount_initially_locked_native = 0;
