@@ -71,7 +71,7 @@ pub mod governance_registry {
         vote_weight_decimals: u8,
         registrar_bump: u8,
     ) -> Result<()> {
-        let registrar = &mut ctx.accounts.registrar.load_init()?;
+        let registrar = &mut ctx.accounts.registrar;
         registrar.bump = registrar_bump;
         registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
@@ -98,7 +98,7 @@ pub mod governance_registry {
         decimals: u8,
     ) -> Result<()> {
         require!(rate > 0, InvalidRate);
-        let registrar = &mut ctx.accounts.registrar.load_mut()?;
+        let registrar = &mut ctx.accounts.registrar;
         registrar.rates[idx as usize] = registrar.new_rate(mint, decimals, rate)?;
         Ok(())
     }
@@ -125,7 +125,7 @@ pub mod governance_registry {
         }
 
         // Load accounts.
-        let registrar = &ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_init()?;
         let voter_weight_record = &mut ctx.accounts.voter_weight_record;
 
@@ -154,7 +154,7 @@ pub mod governance_registry {
         // Creates the new deposit.
         let deposit_id = {
             // Load accounts.
-            let registrar = &ctx.accounts.deposit.registrar.load()?;
+            let registrar = &ctx.accounts.deposit.registrar;
             let voter = &mut ctx.accounts.deposit.voter.load_mut()?;
 
             // Set the lockup start timestamp.
@@ -202,7 +202,7 @@ pub mod governance_registry {
     /// exchange for *frozen* voting tokens. These tokens are not used for
     /// anything other than displaying the amount in wallets.
     pub fn update_deposit(ctx: Context<UpdateDeposit>, id: u8, amount: u64) -> Result<()> {
-        let registrar = &ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
 
         voter.last_deposit_slot = Clock::get()?.slot;
@@ -275,7 +275,7 @@ pub mod governance_registry {
     /// `amount` is in units of the native currency being withdrawn.
     pub fn withdraw(ctx: Context<Withdraw>, deposit_id: u8, amount: u64) -> Result<()> {
         // Load the accounts.
-        let registrar = &ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
 
@@ -380,7 +380,7 @@ pub mod governance_registry {
     /// `periods`, which must be >= the number of periods left on the lockup.
     /// This will re-lock any non-withdrawn vested funds.
     pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, periods: i64) -> Result<()> {
-        let registrar = ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
 
@@ -412,7 +412,7 @@ pub mod governance_registry {
     /// This "revise" instruction should be called in the same transaction,
     /// immediately before voting.
     pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
-        let registrar = ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let voter = ctx.accounts.voter.load()?;
         let record = &mut ctx.accounts.voter_weight_record;
         record.voter_weight = voter.weight(&registrar)?;
@@ -431,7 +431,7 @@ pub mod governance_registry {
     pub fn update_max_vote_weight<'info>(
         ctx: Context<'_, '_, '_, 'info, UpdateMaxVoteWeight<'info>>,
     ) -> Result<()> {
-        let registrar = ctx.accounts.registrar.load()?;
+        let registrar = &ctx.accounts.registrar;
         let _max_vote_weight = {
             let total: Result<u64> = ctx
                 .remaining_accounts
@@ -474,7 +474,7 @@ pub mod governance_registry {
     pub fn set_time_offset(ctx: Context<SetTimeOffset>, time_offset: i64) -> Result<()> {
         let allowed_program =
             Pubkey::from_str("GovernanceProgram11111111111111111111111111").unwrap();
-        let registrar = &mut ctx.accounts.registrar.load_mut()?;
+        let registrar = &mut ctx.accounts.registrar;
         require!(
             registrar.governance_program_id == allowed_program,
             ErrorCode::DebugInstruction

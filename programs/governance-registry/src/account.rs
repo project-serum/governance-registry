@@ -33,7 +33,8 @@ pub const FIXED_VOTE_WEIGHT_FACTOR: u64 = 1;
 pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
 
 /// Instance of a voting rights distributor.
-#[account(zero_copy)]
+#[account]
+#[derive(Default)]
 pub struct Registrar {
     pub governance_program_id: Pubkey,
     pub registrar_authority: Pubkey,

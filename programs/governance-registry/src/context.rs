@@ -19,7 +19,7 @@ pub struct CreateRegistrar<'info> {
         payer = payer,
         space = 8 + size_of::<Registrar>()
     )]
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
     pub registrar_authority: UncheckedAccount<'info>,
 
     pub governance_program_id: UncheckedAccount<'info>,
@@ -39,7 +39,7 @@ pub struct CreateRegistrar<'info> {
 #[instruction(idx: u16, mint: Pubkey, rate: u64, decimals: u8)]
 pub struct CreateExchangeRate<'info> {
     #[account(mut, has_one = registrar_authority)]
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
     pub registrar_authority: Signer<'info>,
 
     #[account(
@@ -74,7 +74,7 @@ pub struct CreateExchangeRate<'info> {
 #[derive(Accounts)]
 #[instruction(voter_bump: u8, voter_weight_record_bump: u8)]
 pub struct CreateVoter<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(
         init,
@@ -114,7 +114,7 @@ pub struct CreateDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateDeposit<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
@@ -199,7 +199,7 @@ impl<'info> UpdateDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
@@ -284,7 +284,7 @@ pub struct CloseDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateSchedule<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
@@ -293,7 +293,7 @@ pub struct UpdateSchedule<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateVoterWeightRecord<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(
         has_one = registrar,
@@ -306,7 +306,7 @@ pub struct UpdateVoterWeightRecord<'info> {
         mut,
         seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
         bump = voter.load()?.voter_weight_record_bump,
-        constraint = voter_weight_record.realm == registrar.load()?.realm,
+        constraint = voter_weight_record.realm == registrar.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
@@ -318,7 +318,7 @@ pub struct UpdateVoterWeightRecord<'info> {
 // exchange rates.
 #[derive(Accounts)]
 pub struct UpdateMaxVoteWeight<'info> {
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
     // TODO: SPL governance has not yet implemented this.
     pub max_vote_weight_record: UncheckedAccount<'info>,
 }
@@ -335,6 +335,6 @@ pub struct CloseVoter<'info> {
 #[instruction(time_offset: i64)]
 pub struct SetTimeOffset<'info> {
     #[account(mut, has_one = registrar_authority)]
-    pub registrar: AccountLoader<'info, Registrar>,
+    pub registrar: Box<Account<'info, Registrar>>,
     pub registrar_authority: Signer<'info>,
 }
