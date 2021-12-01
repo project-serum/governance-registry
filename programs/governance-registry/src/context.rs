@@ -112,6 +112,10 @@ pub struct CreateVoter<'info> {
 #[derive(Accounts)]
 pub struct CreateDeposit<'info> {
     pub deposit: UpdateDeposit<'info>,
+    #[account(
+        constraint = voter_authority.key() == deposit.voter.load()?.voter_authority,
+    )]
+    pub voter_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -120,6 +124,8 @@ pub struct UpdateDeposit<'info> {
 
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
+
+    // The only reason we have this here is for voting_token
     pub voter_authority: UncheckedAccount<'info>,
 
     #[account(
@@ -127,15 +133,16 @@ pub struct UpdateDeposit<'info> {
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
-    pub exchange_vault: Account<'info, TokenAccount>,
-    pub deposit_mint: Account<'info, Mint>,
+    pub exchange_vault: Box<Account<'info, TokenAccount>>,
+    pub deposit_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
     pub deposit_authority: Signer<'info>,
     #[account(
         mut,
         constraint = deposit_token.mint == deposit_mint.key(),
+        constraint = deposit_token.owner == deposit_authority.key(),
     )]
-    pub deposit_token: Account<'info, TokenAccount>,
+    pub deposit_token: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -143,13 +150,13 @@ pub struct UpdateDeposit<'info> {
         associated_token::authority = voter_authority,
         associated_token::mint = voting_mint,
     )]
-    pub voting_token: Account<'info, TokenAccount>,
+    pub voting_token: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), deposit_token.mint.as_ref()],
         bump,
     )]
-    pub voting_mint: Account<'info, Mint>,
+    pub voting_mint: Box<Account<'info, Mint>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,

@@ -260,6 +260,7 @@ impl AddinCookie {
                     system_program: solana_sdk::system_program::id(),
                     rent: solana_program::sysvar::rent::id(),
                 },
+                voter_authority: voter_authority.pubkey(),
             },
             None,
         );
@@ -271,10 +272,11 @@ impl AddinCookie {
         }];
 
         // clone the secrets
-        let signer = Keypair::from_base58_string(&deposit_authority.to_base58_string());
+        let signer1 = Keypair::from_base58_string(&voter_authority.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&deposit_authority.to_base58_string());
 
         self.solana
-            .process_transaction(&instructions, Some(&[&signer]))
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
             .await
     }
 
@@ -321,8 +323,7 @@ impl AddinCookie {
         }];
 
         // clone the secrets
-        // let signer = Keypair::from_base58_string(&authority.to_base58_string());
-        let signer = Keypair::from_base58_string(&voter_authority.to_base58_string());
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
 
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
