@@ -304,6 +304,7 @@ pub struct UpdateVoterWeightRecord<'info> {
         bump = voter.load()?.voter_weight_record_bump,
         constraint = voter_weight_record.realm == registrar.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
+        constraint = voter_weight_record.governing_token_mint == registrar.realm_governing_token_mint,
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
 
