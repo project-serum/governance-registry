@@ -109,7 +109,6 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             reference_account,
             0,
             amount,
-            false,
         )
     };
 

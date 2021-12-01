@@ -109,7 +109,6 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             reference_account,
             0,
             amount,
-            false,
         )
     };
 

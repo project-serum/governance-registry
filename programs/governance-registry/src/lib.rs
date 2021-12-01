@@ -200,7 +200,7 @@ pub mod governance_registry {
 
         // Updates the entry by transferring in tokens.
         let update_ctx = Context::new(ctx.program_id, &mut ctx.accounts.deposit, &[]);
-        update_deposit(update_ctx, deposit_id, amount, allow_clawback)?;
+        update_deposit(update_ctx, deposit_id, amount)?;
 
         Ok(())
     }
@@ -212,7 +212,6 @@ pub mod governance_registry {
         ctx: Context<UpdateDeposit>,
         id: u8,
         amount: u64,
-        allow_clawback: bool,
     ) -> Result<()> {
         msg!("--------update_deposit--------");
         let registrar = &ctx.accounts.registrar;
@@ -244,7 +243,6 @@ pub mod governance_registry {
         let curr_ts = registrar.clock_unix_timestamp();
         d_entry.amount_initially_locked_native -= d_entry.vested(curr_ts)?;
         d_entry.amount_initially_locked_native += amount;
-        d_entry.allow_clawback = allow_clawback;
         d_entry.lockup.start_ts = d_entry
             .lockup
             .start_ts

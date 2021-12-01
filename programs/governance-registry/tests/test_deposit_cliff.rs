@@ -109,7 +109,6 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             reference_account,
             0,
             amount,
-            false,
         )
     };
 

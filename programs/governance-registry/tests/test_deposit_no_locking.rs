@@ -114,7 +114,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             reference_account,
             0,
             amount,
-            false,
         )
     };
     // test deposit and withdraw
@@ -239,7 +238,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter2,
-            voter_authority,
+            voter2_authority,
             &mngo_rate,
             &voter2_authority,
             context.users[2].token_accounts[0],

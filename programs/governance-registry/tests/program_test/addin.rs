@@ -288,13 +288,11 @@ impl AddinCookie {
         token_address: Pubkey,
         id: u8,
         amount: u64,
-        allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&governance_registry::instruction::UpdateDeposit {
                 id,
                 amount,
-                allow_clawback,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
