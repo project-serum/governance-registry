@@ -57,12 +57,14 @@ async fn test_basic() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::Cliff,
             10000,
             0,
+            false,
         )
         .await?;
 

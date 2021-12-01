@@ -60,6 +60,7 @@ impl AddinCookie {
                 realm: realm.realm,
                 realm_community_mint: community_token_mint,
                 registrar_authority: realm.authority,
+                clawback_authority: realm.authority,
                 payer: payer.pubkey(),
                 system_program: solana_sdk::system_program::id(),
                 token_program: spl_token::id(),
@@ -225,18 +226,21 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
+        voter_authority: &Keypair,
         exchange_rate: &ExchangeRateCookie,
-        authority: &Keypair,
+        deposit_authority: &Keypair,
         token_address: Pubkey,
         lockup_kind: governance_registry::account::LockupKind,
         amount: u64,
         periods: i32,
+        allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&governance_registry::instruction::CreateDeposit {
                 kind: lockup_kind,
                 amount,
                 periods,
+                allow_clawback,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
@@ -247,7 +251,8 @@ impl AddinCookie {
                     exchange_vault: exchange_rate.exchange_vault,
                     deposit_token: token_address,
                     voting_token: voter.voting_token(exchange_rate),
-                    voter_authority: authority.pubkey(),
+                    voter_authority: voter_authority.pubkey(),
+                    deposit_authority: deposit_authority.pubkey(),
                     deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
                     voting_mint: exchange_rate.voting_mint,
                     token_program: spl_token::id(),
@@ -266,7 +271,7 @@ impl AddinCookie {
         }];
 
         // clone the secrets
-        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+        let signer = Keypair::from_base58_string(&deposit_authority.to_base58_string());
 
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
@@ -278,15 +283,18 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         exchange_rate: &ExchangeRateCookie,
+        voter_authority: &Keypair,
         authority: &Keypair,
         token_address: Pubkey,
         id: u8,
         amount: u64,
+        allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&governance_registry::instruction::UpdateDeposit {
                 id,
                 amount,
+                allow_clawback,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
@@ -296,13 +304,60 @@ impl AddinCookie {
                 exchange_vault: exchange_rate.exchange_vault,
                 deposit_token: token_address,
                 voting_token: voter.voting_token(exchange_rate),
-                voter_authority: authority.pubkey(),
+                voter_authority: voter_authority.pubkey(),
+                deposit_authority: authority.pubkey(),
                 deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
                 voting_mint: exchange_rate.voting_mint,
                 token_program: spl_token::id(),
                 associated_token_program: spl_associated_token_account::id(),
                 system_program: solana_sdk::system_program::id(),
                 rent: solana_program::sysvar::rent::id(),
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        // let signer = Keypair::from_base58_string(&authority.to_base58_string());
+        let signer = Keypair::from_base58_string(&voter_authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await
+    }
+
+    pub async fn clawback(
+        &self,
+        registrar: &RegistrarCookie,
+        voter: &VoterCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        exchange_rate: &ExchangeRateCookie,
+        authority: &Keypair,
+        token_address: Pubkey,
+        deposit_id: u8,
+    ) -> std::result::Result<(), TransportError> {
+        let data =
+            anchor_lang::InstructionData::data(&governance_registry::instruction::Clawback {
+                deposit_id,
+            });
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &governance_registry::accounts::Withdraw {
+                registrar: registrar.address,
+                voter: voter.address,
+                token_owner_record: token_owner_record.address,
+                exchange_vault: exchange_rate.exchange_vault,
+                withdraw_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
+                voting_token: voter.voting_token(exchange_rate),
+                voting_mint: exchange_rate.voting_mint,
+                destination: token_address,
+                voter_authority: authority.pubkey(),
+                token_program: spl_token::id(),
             },
             None,
         );

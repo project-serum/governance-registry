@@ -55,7 +55,6 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
         .create_realm(
             "testrealm",
             realm_authority.pubkey(),
-            context.users[0].token_accounts[0],
             &context.mints[0],
             &payer,
             &context.addin.program_id,
@@ -106,9 +105,11 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             &voter,
             &mngo_rate,
             &voter_authority,
+            &voter_authority,
             reference_account,
             0,
             amount,
+            false,
         )
     };
 
@@ -122,12 +123,14 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            &voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::Cliff,
             9000,
             3, // days
+            false,
         )
         .await
         .unwrap();

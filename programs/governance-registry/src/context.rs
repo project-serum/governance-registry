@@ -26,6 +26,8 @@ pub struct CreateRegistrar<'info> {
     pub realm: UncheckedAccount<'info>,
     pub realm_community_mint: Account<'info, Mint>,
 
+    pub clawback_authority: UncheckedAccount<'info>,
+
     // TODO: Allow registrar creation only for realm_authority!
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -118,8 +120,7 @@ pub struct UpdateDeposit<'info> {
 
     #[account(mut, has_one = voter_authority, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-    #[account(mut)]
-    pub voter_authority: Signer<'info>,
+    pub voter_authority: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -128,7 +129,8 @@ pub struct UpdateDeposit<'info> {
     )]
     pub exchange_vault: Account<'info, TokenAccount>,
     pub deposit_mint: Account<'info, Mint>,
-
+    #[account(mut)]
+    pub deposit_authority: Signer<'info>,
     #[account(
         mut,
         constraint = deposit_token.mint == deposit_mint.key(),
@@ -137,7 +139,7 @@ pub struct UpdateDeposit<'info> {
 
     #[account(
         init_if_needed,
-        payer = voter_authority,
+        payer = deposit_authority,
         associated_token::authority = voter_authority,
         associated_token::mint = voting_mint,
     )]
@@ -161,7 +163,7 @@ impl<'info> UpdateDeposit<'info> {
         let accounts = token::Transfer {
             from: self.deposit_token.to_account_info(),
             to: self.exchange_vault.to_account_info(),
-            authority: self.voter_authority.to_account_info(),
+            authority: self.deposit_authority.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }

@@ -105,9 +105,11 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             &voter,
             &mngo_rate,
             &voter_authority,
+            &voter_authority,
             reference_account,
             0,
             amount,
+            false,
         )
     };
 
@@ -121,12 +123,14 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::Daily,
             9000,
             3,
+            false,
         )
         .await
         .unwrap();

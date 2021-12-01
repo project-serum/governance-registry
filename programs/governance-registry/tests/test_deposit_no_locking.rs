@@ -110,9 +110,11 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &mngo_rate,
             &voter_authority,
+            &voter_authority,
             reference_account,
             0,
             amount,
+            false,
         )
     };
     // test deposit and withdraw
@@ -125,12 +127,14 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::None,
             10000,
             0,
+            false,
         )
         .await
         .unwrap();
@@ -155,12 +159,14 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::None,
             7000,
             0,
+            false,
         )
         .await
         .unwrap();
@@ -233,12 +239,14 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter2,
+            voter_authority,
             &mngo_rate,
             &voter2_authority,
             context.users[2].token_accounts[0],
             governance_registry::account::LockupKind::None,
             1000,
             5,
+            false,
         )
         .await?;
 
@@ -261,12 +269,14 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .create_deposit(
             &registrar,
             &voter,
+            voter_authority,
             &mngo_rate,
             &voter_authority,
             reference_account,
             governance_registry::account::LockupKind::Monthly,
             3000,
             1,
+            false,
         )
         .await
         .unwrap();

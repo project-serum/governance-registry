@@ -40,6 +40,7 @@ pub struct Registrar {
     pub registrar_authority: Pubkey,
     pub realm: Pubkey,
     pub realm_community_mint: Pubkey,
+    pub clawback_authority: Pubkey,
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],
@@ -170,6 +171,8 @@ pub struct DepositEntry {
     /// This value is needed to compute the amount that vests each peroid,
     /// which should not change due to withdraws.
     pub amount_initially_locked_native: u64,
+
+    pub allow_clawback: bool,
 
     // Locked state.
     pub lockup: Lockup,
@@ -973,6 +976,7 @@ mod tests {
             rate_idx: 0,
             amount_deposited_native: t.amount_deposited,
             amount_initially_locked_native: t.amount_deposited,
+            allow_clawback: false,
             lockup: Lockup {
                 start_ts,
                 end_ts,
