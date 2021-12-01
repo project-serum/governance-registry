@@ -5,7 +5,7 @@ use anchor_spl::token::{self, Mint};
 use context::*;
 use error::*;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
-use spl_governance::state::token_owner_record;
+use spl_governance::state::{realm, token_owner_record};
 use std::{convert::TryFrom, str::FromStr};
 
 mod access_control;
@@ -76,9 +76,21 @@ pub mod governance_registry {
         registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
         registrar.realm_governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
-        registrar.registrar_authority = ctx.accounts.registrar_authority.key();
+        registrar.realm_authority = ctx.accounts.realm_authority.key();
         registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
+
+        // Verify that "realm_authority" is the expected authority on "realm"
+        // and that the mint matches one of the realm mints too.
+        let realm = realm::get_realm_data_for_governing_token_mint(
+            &registrar.governance_program_id,
+            &ctx.accounts.realm.to_account_info(),
+            &registrar.realm_governing_token_mint,
+        )?;
+        require!(
+            realm.authority.unwrap() == ctx.accounts.realm_authority.key(),
+            ErrorCode::InvalidRealmAuthority
+        );
 
         Ok(())
     }

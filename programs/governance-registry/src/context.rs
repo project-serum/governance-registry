@@ -20,13 +20,12 @@ pub struct CreateRegistrar<'info> {
         space = 8 + size_of::<Registrar>()
     )]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: UncheckedAccount<'info>,
 
     pub governance_program_id: UncheckedAccount<'info>,
     pub realm: UncheckedAccount<'info>,
     pub realm_governing_token_mint: Account<'info, Mint>,
+    pub realm_authority: Signer<'info>,
 
-    // TODO: Allow registrar creation only for realm_authority!
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -38,9 +37,9 @@ pub struct CreateRegistrar<'info> {
 #[derive(Accounts)]
 #[instruction(idx: u16, mint: Pubkey, rate: u64, decimals: u8)]
 pub struct CreateExchangeRate<'info> {
-    #[account(mut, has_one = registrar_authority)]
+    #[account(mut, has_one = realm_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: Signer<'info>,
+    pub realm_authority: Signer<'info>,
 
     #[account(
         init,
@@ -331,7 +330,7 @@ pub struct CloseVoter<'info> {
 #[derive(Accounts)]
 #[instruction(time_offset: i64)]
 pub struct SetTimeOffset<'info> {
-    #[account(mut, has_one = registrar_authority)]
+    #[account(mut, has_one = realm_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
-    pub registrar_authority: Signer<'info>,
+    pub realm_authority: Signer<'info>,
 }

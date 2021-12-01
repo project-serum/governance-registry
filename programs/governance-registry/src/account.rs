@@ -37,9 +37,9 @@ pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
 #[derive(Default)]
 pub struct Registrar {
     pub governance_program_id: Pubkey,
-    pub registrar_authority: Pubkey,
     pub realm: Pubkey,
     pub realm_governing_token_mint: Pubkey,
+    pub realm_authority: Pubkey,
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],

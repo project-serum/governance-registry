@@ -42,4 +42,6 @@ pub enum ErrorCode {
     DebugInstruction,
     #[msg("")]
     InvalidTokenOwnerRecord,
+    #[msg("")]
+    InvalidRealmAuthority,
 }

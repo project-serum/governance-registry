@@ -38,6 +38,7 @@ impl AddinCookie {
     pub async fn create_registrar(
         &self,
         realm: &GovernanceRealmCookie,
+        authority: &Keypair,
         payer: &Keypair,
     ) -> RegistrarCookie {
         let community_token_mint = realm.community_token_mint.pubkey.unwrap();
@@ -65,7 +66,7 @@ impl AddinCookie {
                 governance_program_id: realm.governance.program_id,
                 realm: realm.realm,
                 realm_governing_token_mint: community_token_mint,
-                registrar_authority: realm.authority,
+                realm_authority: realm.authority,
                 payer: payer.pubkey(),
                 system_program: solana_sdk::system_program::id(),
                 token_program: spl_token::id(),
@@ -81,10 +82,11 @@ impl AddinCookie {
         }];
 
         // clone the user secret
-        let signer = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
 
         self.solana
-            .process_transaction(&instructions, Some(&[&signer]))
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
             .await
             .unwrap();
 
@@ -133,7 +135,7 @@ impl AddinCookie {
                 voting_mint,
                 deposit_mint,
                 registrar: registrar.address,
-                registrar_authority: authority.pubkey(),
+                realm_authority: authority.pubkey(),
                 payer: payer.pubkey(),
                 rent: solana_program::sysvar::rent::id(),
                 token_program: spl_token::id(),
@@ -461,7 +463,7 @@ impl AddinCookie {
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
             &governance_registry::accounts::SetTimeOffset {
                 registrar: registrar.address,
-                registrar_authority: authority.pubkey(),
+                realm_authority: authority.pubkey(),
             },
             None,
         );
