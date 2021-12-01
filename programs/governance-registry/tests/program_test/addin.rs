@@ -322,7 +322,6 @@ impl AddinCookie {
         voter: &VoterCookie,
         token_owner_record: &TokenOwnerRecordCookie,
         exchange_rate: &ExchangeRateCookie,
-        voter_authority: &Keypair,
         clawback_authority: &Keypair,
         token_address: Pubkey,
         deposit_id: u8,
