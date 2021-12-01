@@ -298,7 +298,13 @@ pub mod governance_registry {
             ErrorCode::ClawbackNotAllowedOnDeposit
         );
         let amount_not_yet_vested =
-            deposit_entry.amount_deposited_native - deposit_entry.vested(curr_ts).unwrap();
+            deposit_entry.amount_initially_locked_native - deposit_entry.vested(curr_ts).unwrap();
+
+        // sanity check only
+        require!(
+            deposit_entry.amount_deposited_native >= amount_not_yet_vested,
+            InsufficientVestedTokens
+        );
 
         // Transfer the tokens to withdraw.
         token::transfer(
@@ -326,7 +332,7 @@ pub mod governance_registry {
         )?;
 
         // Update deposit book keeping.
-        deposit_entry.amount_deposited_native = deposit_entry.vested(curr_ts).unwrap();
+        deposit_entry.amount_deposited_native -= amount_not_yet_vested;
         deposit_entry.amount_initially_locked_native = 0;
         deposit_entry.lockup.kind = LockupKind::None;
 
