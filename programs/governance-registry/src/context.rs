@@ -53,17 +53,6 @@ pub struct CreateExchangeRate<'info> {
     pub exchange_vault: Account<'info, TokenAccount>,
     pub deposit_mint: Account<'info, Mint>,
 
-    #[account(
-        init,
-        seeds = [registrar.key().as_ref(), deposit_mint.key().as_ref()],
-        bump,
-        payer = payer,
-        mint::authority = registrar,
-        mint::freeze_authority = registrar,
-        mint::decimals = deposit_mint.decimals,
-    )]
-    pub voting_mint: Account<'info, Mint>,
-
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -122,11 +111,8 @@ pub struct CreateDeposit<'info> {
 pub struct UpdateDeposit<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
-    #[account(mut, has_one = voter_authority, has_one = registrar)]
+    #[account(mut, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-
-    // The only reason we have this here is for voting_token
-    pub voter_authority: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -144,20 +130,6 @@ pub struct UpdateDeposit<'info> {
     )]
     pub deposit_token: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        init_if_needed,
-        payer = deposit_authority,
-        associated_token::authority = voter_authority,
-        associated_token::mint = voting_mint,
-    )]
-    pub voting_token: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        seeds = [registrar.key().as_ref(), deposit_token.mint.as_ref()],
-        bump,
-    )]
-    pub voting_mint: Box<Account<'info, Mint>>,
-
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -174,45 +146,14 @@ impl<'info> UpdateDeposit<'info> {
         };
         CpiContext::new(program, accounts)
     }
-
-    pub fn thaw_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::ThawAccount<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::ThawAccount {
-            account: self.voting_token.to_account_info(),
-            mint: self.voting_mint.to_account_info(),
-            authority: self.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-    pub fn mint_to_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::MintTo<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::MintTo {
-            mint: self.voting_mint.to_account_info(),
-            to: self.voting_token.to_account_info(),
-            authority: self.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-    pub fn freeze_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::FreezeAccount<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::FreezeAccount {
-            account: self.voting_token.to_account_info(),
-            mint: self.voting_mint.to_account_info(),
-            authority: self.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
 }
 
 #[derive(Accounts)]
 pub struct WithdrawOrClawback<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
-    #[account(mut, has_one = registrar, has_one = voter_authority)]
+    #[account(mut, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-    pub voter_authority: UncheckedAccount<'info>, // only needed for voting_token
     pub token_owner_record: UncheckedAccount<'info>,
 
     // The address is verified in the instructions.
@@ -231,19 +172,6 @@ pub struct WithdrawOrClawback<'info> {
     #[account(mut)]
     pub destination: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        mut,
-        associated_token::authority = voter_authority,
-        associated_token::mint = voting_mint,
-    )]
-    pub voting_token: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        seeds = [registrar.key().as_ref(), withdraw_mint.key().as_ref()],
-        bump,
-    )]
-    pub voting_mint: Box<Account<'info, Mint>>,
-
     pub token_program: Program<'info, Token>,
 }
 
@@ -253,36 +181,6 @@ impl<'info> WithdrawOrClawback<'info> {
         let accounts = token::Transfer {
             from: self.exchange_vault.to_account_info(),
             to: self.destination.to_account_info(),
-            authority: self.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-    pub fn thaw_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::ThawAccount<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::ThawAccount {
-            account: self.voting_token.to_account_info(),
-            mint: self.voting_mint.to_account_info(),
-            authority: self.registrar.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-    pub fn burn_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Burn<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Burn {
-            mint: self.voting_mint.to_account_info(),
-            to: self.voting_token.to_account_info(),
-            authority: self.voter_authority.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-    pub fn freeze_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::FreezeAccount<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::FreezeAccount {
-            account: self.voting_token.to_account_info(),
-            mint: self.voting_mint.to_account_info(),
             authority: self.registrar.to_account_info(),
         };
         CpiContext::new(program, accounts)

@@ -254,30 +254,6 @@ pub mod governance_registry {
             )
             .unwrap();
 
-        // Thaw the account if it's frozen, so that we can mint.
-        if ctx.accounts.voting_token.is_frozen() {
-            token::thaw_account(
-                ctx.accounts
-                    .thaw_ctx()
-                    .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-            )?;
-        }
-
-        // Mint vote tokens to the depositor.
-        token::mint_to(
-            ctx.accounts
-                .mint_to_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-            amount,
-        )?;
-
-        // Freeze the vote tokens; they are just used for UIs + accounting.
-        token::freeze_account(
-            ctx.accounts
-                .freeze_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
-
         Ok(())
     }
 
@@ -315,23 +291,6 @@ pub mod governance_registry {
             amount_not_yet_vested,
         )?;
 
-        // Unfreeze the voting token.
-        token::thaw_account(
-            ctx.accounts
-                .thaw_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
-
-        // Burn the voting tokens.
-        token::burn(ctx.accounts.burn_ctx(), amount_not_yet_vested)?;
-
-        // Re-freeze the vote token.
-        token::freeze_account(
-            ctx.accounts
-                .freeze_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
-
         // Update deposit book keeping.
         deposit_entry.amount_deposited_native -= amount_not_yet_vested;
         deposit_entry.amount_initially_locked_native = 0;
@@ -352,7 +311,7 @@ pub mod governance_registry {
         require!(ctx.accounts.authority.key() == voter.voter_authority, InvalidAuthority);
 
         // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner = ctx.accounts.voter_authority.key();
+        let token_owner = voter.voter_authority;
         let token_owner_record_address_seeds =
             token_owner_record::get_token_owner_record_address_seeds(
                 &registrar.realm,
@@ -409,23 +368,6 @@ pub mod governance_registry {
                 .transfer_ctx()
                 .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
             amount,
-        )?;
-
-        // Unfreeze the voting token.
-        token::thaw_account(
-            ctx.accounts
-                .thaw_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
-
-        // Burn the voting tokens.
-        token::burn(ctx.accounts.burn_ctx(), amount)?;
-
-        // Re-freeze the vote token.
-        token::freeze_account(
-            ctx.accounts
-                .freeze_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
         )?;
 
         Ok(())

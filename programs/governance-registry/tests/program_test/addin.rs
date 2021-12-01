@@ -25,7 +25,6 @@ pub struct RegistrarCookie {
 pub struct ExchangeRateCookie {
     pub deposit_mint: MintCookie,
     pub exchange_vault: Pubkey,
-    pub voting_mint: Pubkey,
 }
 
 pub struct VoterCookie {
@@ -104,10 +103,6 @@ impl AddinCookie {
             &registrar.address,
             &deposit_mint,
         );
-        let (voting_mint, _voting_mint_bump) = Pubkey::find_program_address(
-            &[&registrar.address.to_bytes(), &deposit_mint.to_bytes()],
-            &self.program_id,
-        );
 
         let data = anchor_lang::InstructionData::data(
             &governance_registry::instruction::CreateExchangeRate {
@@ -121,7 +116,6 @@ impl AddinCookie {
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
             &governance_registry::accounts::CreateExchangeRate {
                 exchange_vault,
-                voting_mint,
                 deposit_mint,
                 registrar: registrar.address,
                 registrar_authority: authority.pubkey(),
@@ -152,7 +146,6 @@ impl AddinCookie {
         ExchangeRateCookie {
             deposit_mint: mint.clone(),
             exchange_vault,
-            voting_mint,
         }
     }
 
@@ -250,11 +243,8 @@ impl AddinCookie {
                     voter: voter.address,
                     exchange_vault: exchange_rate.exchange_vault,
                     deposit_token: token_address,
-                    voting_token: voter.voting_token(exchange_rate),
-                    voter_authority: voter_authority.pubkey(),
                     deposit_authority: deposit_authority.pubkey(),
                     deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
-                    voting_mint: exchange_rate.voting_mint,
                     token_program: spl_token::id(),
                     associated_token_program: spl_associated_token_account::id(),
                     system_program: solana_sdk::system_program::id(),
@@ -285,7 +275,6 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         exchange_rate: &ExchangeRateCookie,
-        voter_authority: &Keypair,
         authority: &Keypair,
         token_address: Pubkey,
         id: u8,
@@ -303,11 +292,8 @@ impl AddinCookie {
                 voter: voter.address,
                 exchange_vault: exchange_rate.exchange_vault,
                 deposit_token: token_address,
-                voting_token: voter.voting_token(exchange_rate),
-                voter_authority: voter_authority.pubkey(),
                 deposit_authority: authority.pubkey(),
                 deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
-                voting_mint: exchange_rate.voting_mint,
                 token_program: spl_token::id(),
                 associated_token_program: spl_associated_token_account::id(),
                 system_program: solana_sdk::system_program::id(),
@@ -353,10 +339,7 @@ impl AddinCookie {
                 token_owner_record: token_owner_record.address,
                 exchange_vault: exchange_rate.exchange_vault,
                 withdraw_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
-                voting_token: voter.voting_token(exchange_rate),
-                voting_mint: exchange_rate.voting_mint,
                 destination: token_address,
-                voter_authority: voter_authority.pubkey(),
                 authority: clawback_authority.pubkey(),
                 token_program: spl_token::id(),
             },
@@ -401,10 +384,7 @@ impl AddinCookie {
                 token_owner_record: token_owner_record.address,
                 exchange_vault: exchange_rate.exchange_vault,
                 withdraw_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
-                voting_token: voter.voting_token(exchange_rate),
-                voting_mint: exchange_rate.voting_mint,
                 destination: token_address,
-                voter_authority: authority.pubkey(),
                 authority: authority.pubkey(),
                 token_program: spl_token::id(),
             },
@@ -551,12 +531,5 @@ impl VoterCookie {
             .await
             .deposits[deposit_id as usize]
             .amount_deposited_native
-    }
-
-    pub fn voting_token(&self, rate: &ExchangeRateCookie) -> Pubkey {
-        spl_associated_token_account::get_associated_token_address(
-            &self.authority,
-            &rate.voting_mint,
-        )
     }
 }

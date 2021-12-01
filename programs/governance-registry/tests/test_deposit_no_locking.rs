@@ -110,7 +110,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &mngo_rate,
             &voter_authority,
-            &voter_authority,
             reference_account,
             0,
             amount,
