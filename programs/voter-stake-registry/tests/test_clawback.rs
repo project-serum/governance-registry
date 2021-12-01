@@ -83,7 +83,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &mngo_rate,
             realm_authority,
             realm_authority_ata,
-            governance_registry::account::LockupKind::Daily,
+            voter_stake_registry::account::LockupKind::Daily,
             10000,
             10,
             true,

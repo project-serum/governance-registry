@@ -1,12 +1,12 @@
 [package]
-name = "governance-registry"
+name = "voter-stake-registry"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "governance_registry"
+name = "voter_stake_registry"
 doctest = false
 
 [features]

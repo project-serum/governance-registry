@@ -61,7 +61,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 /// Note that the above also implies that the `max_vote_weight` must fit into
 /// a u64.
 #[program]
-pub mod governance_registry {
+pub mod voter_stake_registry {
     use super::*;
 
     /// Creates a new voting registrar. There can only be a single registrar

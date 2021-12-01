@@ -14,7 +14,7 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { GovernanceRegistry } from "../target/types/governance_registry";
+import { VoterStakeRegistry } from "../target/types/voter_stake_registry";
 
 const SYSVAR_INSTRUCTIONS_PUBKEY = new PublicKey(
   "Sysvar1nstructions1111111111111111111111111"
@@ -24,7 +24,7 @@ describe("voting-rights", () => {
   anchor.setProvider(anchor.Provider.env());
 
   const program = anchor.workspace
-    .GovernanceRegistry as Program<GovernanceRegistry>;
+    .VoterStakeRegistry as Program<VoterStakeRegistry>;
 
   // Initialized variables shared across tests.
   const governanceProgramId = new PublicKey(

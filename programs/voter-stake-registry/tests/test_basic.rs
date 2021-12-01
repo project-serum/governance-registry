@@ -61,7 +61,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &mngo_rate,
             &voter_authority,
             reference_account,
-            governance_registry::account::LockupKind::Cliff,
+            voter_stake_registry::account::LockupKind::Cliff,
             10000,
             0,
             false,

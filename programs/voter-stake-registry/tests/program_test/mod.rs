@@ -56,12 +56,12 @@ pub struct TestContext {
 
 impl TestContext {
     pub async fn new() -> Self {
-        let addin_program_id = governance_registry::id();
+        let addin_program_id = voter_stake_registry::id();
 
         let mut test = ProgramTest::new(
-            "governance_registry",
+            "voter_stake_registry",
             addin_program_id,
-            processor!(governance_registry::entry),
+            processor!(voter_stake_registry::entry),
         );
         test.set_bpf_compute_max_units(200000);
 

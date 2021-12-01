@@ -53,14 +53,14 @@ impl AddinCookie {
 
         let vote_weight_decimals = 6;
         let data = anchor_lang::InstructionData::data(
-            &governance_registry::instruction::CreateRegistrar {
+            &voter_stake_registry::instruction::CreateRegistrar {
                 vote_weight_decimals,
                 registrar_bump,
             },
         );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::CreateRegistrar {
+            &voter_stake_registry::accounts::CreateRegistrar {
                 registrar,
                 governance_program_id: realm.governance.program_id,
                 realm: realm.realm,
@@ -113,7 +113,7 @@ impl AddinCookie {
         );
 
         let data = anchor_lang::InstructionData::data(
-            &governance_registry::instruction::CreateExchangeRate {
+            &voter_stake_registry::instruction::CreateExchangeRate {
                 idx: index,
                 mint: deposit_mint,
                 rate,
@@ -122,7 +122,7 @@ impl AddinCookie {
         );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::CreateExchangeRate {
+            &voter_stake_registry::accounts::CreateExchangeRate {
                 exchange_vault,
                 deposit_mint,
                 registrar: registrar.address,
@@ -181,13 +181,13 @@ impl AddinCookie {
         );
 
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::CreateVoter {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::CreateVoter {
                 voter_bump,
                 voter_weight_record_bump,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::CreateVoter {
+            &voter_stake_registry::accounts::CreateVoter {
                 voter,
                 voter_weight_record,
                 registrar: registrar.address,
@@ -232,13 +232,13 @@ impl AddinCookie {
         exchange_rate: &ExchangeRateCookie,
         deposit_authority: &Keypair,
         token_address: Pubkey,
-        lockup_kind: governance_registry::account::LockupKind,
+        lockup_kind: voter_stake_registry::account::LockupKind,
         amount: u64,
         periods: i32,
         allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::CreateDeposit {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::CreateDeposit {
                 kind: lockup_kind,
                 amount,
                 periods,
@@ -246,8 +246,8 @@ impl AddinCookie {
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::CreateDeposit {
-                deposit: governance_registry::accounts::UpdateDeposit {
+            &voter_stake_registry::accounts::CreateDeposit {
+                deposit: voter_stake_registry::accounts::UpdateDeposit {
                     registrar: registrar.address,
                     voter: voter.address,
                     exchange_vault: exchange_rate.exchange_vault,
@@ -290,13 +290,13 @@ impl AddinCookie {
         amount: u64,
     ) -> std::result::Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::UpdateDeposit {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::UpdateDeposit {
                 id,
                 amount,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::UpdateDeposit {
+            &voter_stake_registry::accounts::UpdateDeposit {
                 registrar: registrar.address,
                 voter: voter.address,
                 exchange_vault: exchange_rate.exchange_vault,
@@ -336,12 +336,12 @@ impl AddinCookie {
         deposit_id: u8,
     ) -> std::result::Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::Clawback {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Clawback {
                 deposit_id,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::WithdrawOrClawback {
+            &voter_stake_registry::accounts::WithdrawOrClawback {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
@@ -380,13 +380,13 @@ impl AddinCookie {
         amount: u64,
     ) -> std::result::Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::Withdraw {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Withdraw {
                 deposit_id,
                 amount,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::WithdrawOrClawback {
+            &voter_stake_registry::accounts::WithdrawOrClawback {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
@@ -417,13 +417,13 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-    ) -> std::result::Result<governance_registry::account::VoterWeightRecord, TransportError> {
+    ) -> std::result::Result<voter_stake_registry::account::VoterWeightRecord, TransportError> {
         let data = anchor_lang::InstructionData::data(
-            &governance_registry::instruction::UpdateVoterWeightRecord {},
+            &voter_stake_registry::instruction::UpdateVoterWeightRecord {},
         );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::UpdateVoterWeightRecord {
+            &voter_stake_registry::accounts::UpdateVoterWeightRecord {
                 registrar: registrar.address,
                 voter: voter.address,
                 voter_weight_record: voter.voter_weight_record,
@@ -442,7 +442,7 @@ impl AddinCookie {
 
         Ok(self
             .solana
-            .get_account::<governance_registry::account::VoterWeightRecord>(
+            .get_account::<voter_stake_registry::account::VoterWeightRecord>(
                 voter.voter_weight_record,
             )
             .await)
@@ -455,12 +455,12 @@ impl AddinCookie {
         deposit_id: u8,
     ) -> Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::CloseDeposit {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::CloseDeposit {
                 deposit_id,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::CloseDeposit {
+            &voter_stake_registry::accounts::CloseDeposit {
                 voter: voter.address,
                 voter_authority: authority.pubkey(),
             },
@@ -488,12 +488,12 @@ impl AddinCookie {
         time_offset: i64,
     ) {
         let data =
-            anchor_lang::InstructionData::data(&governance_registry::instruction::SetTimeOffset {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::SetTimeOffset {
                 time_offset,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &governance_registry::accounts::SetTimeOffset {
+            &voter_stake_registry::accounts::SetTimeOffset {
                 registrar: registrar.address,
                 realm_authority: authority.pubkey(),
             },
@@ -528,7 +528,7 @@ impl ExchangeRateCookie {
 impl VoterCookie {
     pub async fn deposit_amount(&self, solana: &SolanaCookie, deposit_id: u8) -> u64 {
         solana
-            .get_account::<governance_registry::account::Voter>(self.address)
+            .get_account::<voter_stake_registry::account::Voter>(self.address)
             .await
             .deposits[deposit_id as usize]
             .amount_deposited_native
