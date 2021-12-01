@@ -304,8 +304,13 @@ pub mod governance_registry {
 
         // Update deposit book keeping.
         deposit_entry.amount_deposited_native -= amount_not_yet_vested;
+
+        // Now that all locked funds are withdrawn, end the lockup
         deposit_entry.amount_initially_locked_native = 0;
         deposit_entry.lockup.kind = LockupKind::None;
+        deposit_entry.lockup.start_ts = registrar.clock_unix_timestamp();
+        deposit_entry.lockup.end_ts = deposit_entry.lockup.start_ts;
+        deposit_entry.allow_clawback = false;
 
         Ok(())
     }
