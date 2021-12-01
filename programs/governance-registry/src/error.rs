@@ -40,4 +40,6 @@ pub enum ErrorCode {
     InvalidMint,
     #[msg("")]
     DebugInstruction,
+    #[msg("")]
+    InvalidTokenOwnerRecord,
 }

@@ -404,9 +404,7 @@ impl AddinCookie {
             data,
         }];
 
-        self.solana
-            .process_transaction(&instructions, None)
-            .await?;
+        self.solana.process_transaction(&instructions, None).await?;
 
         Ok(self
             .solana

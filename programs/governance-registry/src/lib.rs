@@ -272,18 +272,18 @@ pub mod governance_registry {
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
 
         // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner = ctx.accounts.voter_authority.key();
-        let token_owner_record_address_seeds =
-            token_owner_record::get_token_owner_record_address_seeds(
+        let token_owner_record_data =
+            token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
+                &registrar.governance_program_id,
+                &ctx.accounts.token_owner_record.to_account_info(),
                 &registrar.realm,
                 &registrar.realm_governing_token_mint,
-                &token_owner,
-            );
-        let token_owner_record_data = token_owner_record::get_token_owner_record_data_for_seeds(
-            &registrar.governance_program_id,
-            &ctx.accounts.token_owner_record.to_account_info(),
-            &token_owner_record_address_seeds,
-        )?;
+            )?;
+        let token_owner = ctx.accounts.voter_authority.key();
+        require!(
+            token_owner_record_data.governing_token_owner == token_owner,
+            InvalidTokenOwnerRecord
+        );
         token_owner_record_data.assert_can_withdraw_governing_tokens()?;
 
         // Must not withdraw in the same slot as depositing, to prevent people
