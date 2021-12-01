@@ -21,8 +21,13 @@ pub struct CreateRegistrar<'info> {
     )]
     pub registrar: Box<Account<'info, Registrar>>,
 
-    pub governance_program_id: UncheckedAccount<'info>,
+    // realm is validated in the instruction:
+    // - realm is owned by the governance_program_id
+    // - realm_governing_token_mint must be the community or council mint
+    // - realm_authority is realm.authority
     pub realm: UncheckedAccount<'info>,
+
+    pub governance_program_id: UncheckedAccount<'info>,
     pub realm_governing_token_mint: Account<'info, Mint>,
     pub realm_authority: Signer<'info>,
 
@@ -203,6 +208,12 @@ pub struct Withdraw<'info> {
     #[account(mut, has_one = registrar, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
+
+    // token_owner_record is validated in the instruction:
+    // - owned by registrar.governance_program_id
+    // - for the registrar.realm
+    // - for the registrar.realm_governing_token_mint
+    // - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
 
     #[account(
