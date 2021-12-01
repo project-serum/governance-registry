@@ -383,7 +383,6 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-        authority: &Keypair,
     ) -> std::result::Result<governance_registry::account::VoterWeightRecord, TransportError> {
         let data = anchor_lang::InstructionData::data(
             &governance_registry::instruction::UpdateVoterWeightRecord {},
@@ -394,7 +393,6 @@ impl AddinCookie {
                 registrar: registrar.address,
                 voter: voter.address,
                 voter_weight_record: voter.voter_weight_record,
-                voter_authority: authority.pubkey(),
                 system_program: solana_sdk::system_program::id(),
             },
             None,
@@ -406,11 +404,8 @@ impl AddinCookie {
             data,
         }];
 
-        // clone the secrets
-        let signer = Keypair::from_base58_string(&authority.to_base58_string());
-
         self.solana
-            .process_transaction(&instructions, Some(&[&signer]))
+            .process_transaction(&instructions, None)
             .await?;
 
         Ok(self

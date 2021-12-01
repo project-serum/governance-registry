@@ -295,16 +295,12 @@ pub struct UpdateSchedule<'info> {
 pub struct UpdateVoterWeightRecord<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
-    #[account(
-        has_one = registrar,
-        has_one = voter_authority,
-    )]
+    #[account(has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
-    pub voter_authority: Signer<'info>,
 
     #[account(
         mut,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
+        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter.load()?.voter_authority.key().as_ref()],
         bump = voter.load()?.voter_weight_record_bump,
         constraint = voter_weight_record.realm == registrar.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,

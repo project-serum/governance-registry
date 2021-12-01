@@ -18,7 +18,6 @@ async fn balances(
     registrar: &RegistrarCookie,
     address: Pubkey,
     voter: &VoterCookie,
-    voter_authority: &Keypair,
     rate: &ExchangeRateCookie,
     deposit_id: u8,
 ) -> Balances {
@@ -31,7 +30,7 @@ async fn balances(
     let deposit = voter.deposit_amount(&context.solana, deposit_id).await;
     let vwr = context
         .addin
-        .update_voter_weight_record(&registrar, &voter, &voter_authority)
+        .update_voter_weight_record(&registrar, &voter)
         .await
         .unwrap();
     Balances {
@@ -87,7 +86,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &registrar,
             reference_account,
             &voter,
-            &voter_authority,
             &mngo_rate,
             depot_id,
         )
@@ -220,7 +218,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         &registrar,
         reference_account,
         &voter2,
-        &voter2_authority,
         &mngo_rate,
         0,
     )
@@ -247,7 +244,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         &registrar,
         reference_account,
         &voter2,
-        &voter2_authority,
         &mngo_rate,
         0,
     )

@@ -18,7 +18,6 @@ async fn balances(
     registrar: &RegistrarCookie,
     address: Pubkey,
     voter: &VoterCookie,
-    voter_authority: &Keypair,
     rate: &ExchangeRateCookie,
     deposit_id: u8,
 ) -> Balances {
@@ -31,7 +30,7 @@ async fn balances(
     let deposit = voter.deposit_amount(&context.solana, deposit_id).await;
     let vwr = context
         .addin
-        .update_voter_weight_record(&registrar, &voter, &voter_authority)
+        .update_voter_weight_record(&registrar, &voter)
         .await
         .unwrap();
     Balances {
@@ -82,7 +81,6 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             &registrar,
             reference_account,
             &voter,
-            &voter_authority,
             &mngo_rate,
             depot_id,
         )
