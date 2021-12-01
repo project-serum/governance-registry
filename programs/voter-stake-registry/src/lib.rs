@@ -220,11 +220,7 @@ pub mod voter_stake_registry {
     /// Updates a deposit entry by depositing tokens into the registrar in
     /// exchange for *frozen* voting tokens. These tokens are not used for
     /// anything other than displaying the amount in wallets.
-    pub fn update_deposit(
-        ctx: Context<UpdateDeposit>,
-        id: u8,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn update_deposit(ctx: Context<UpdateDeposit>, id: u8, amount: u64) -> Result<()> {
         msg!("--------update_deposit--------");
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
@@ -275,11 +271,15 @@ pub mod voter_stake_registry {
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
-        require!(ctx.accounts.authority.key() == registrar.clawback_authority, InvalidAuthority);
+        require!(
+            ctx.accounts.authority.key() == registrar.clawback_authority,
+            InvalidAuthority
+        );
 
         // Get the deposit being withdrawn from.
         let curr_ts = registrar.clock_unix_timestamp();
         let deposit_entry = &mut voter.deposits[deposit_id as usize];
+        require!(deposit_entry.is_used, InvalidDepositId);
         require!(
             deposit_entry.allow_clawback,
             ErrorCode::ClawbackNotAllowedOnDeposit
@@ -296,9 +296,7 @@ pub mod voter_stake_registry {
         // Transfer the tokens to withdraw.
         let registrar_seeds = registrar_seeds!(registrar);
         token::transfer(
-            ctx.accounts
-                .transfer_ctx()
-                .with_signer(&[registrar_seeds]),
+            ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
             amount_not_yet_vested,
         )?;
 
@@ -324,7 +322,10 @@ pub mod voter_stake_registry {
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;
         require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
-        require!(ctx.accounts.authority.key() == voter.voter_authority, InvalidAuthority);
+        require!(
+            ctx.accounts.authority.key() == voter.voter_authority,
+            InvalidAuthority
+        );
 
         // Governance may forbid withdraws, for example when engaged in a vote.
         let token_owner_record_data =
@@ -402,7 +403,10 @@ pub mod voter_stake_registry {
         // of their locking period. That ensures a deposit can't be closed and reopenend
         // with a different locking kind or locking end time before funds are deposited.
         if d.allow_clawback {
-            require!(d.lockup.end_ts < Clock::get()?.unix_timestamp, DepositStillLocked);
+            require!(
+                d.lockup.end_ts < Clock::get()?.unix_timestamp,
+                DepositStillLocked
+            );
         }
 
         d.is_used = false;
