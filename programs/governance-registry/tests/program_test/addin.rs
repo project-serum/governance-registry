@@ -40,10 +40,16 @@ impl AddinCookie {
         realm: &GovernanceRealmCookie,
         payer: &Keypair,
     ) -> RegistrarCookie {
-        let (registrar, registrar_bump) =
-            Pubkey::find_program_address(&[&realm.realm.to_bytes()], &self.program_id);
-
         let community_token_mint = realm.community_token_mint.pubkey.unwrap();
+
+        let (registrar, registrar_bump) = Pubkey::find_program_address(
+            &[
+                &realm.realm.to_bytes(),
+                b"registrar".as_ref(),
+                &community_token_mint.to_bytes(),
+            ],
+            &self.program_id,
+        );
 
         let vote_weight_decimals = 6;
         let data = anchor_lang::InstructionData::data(
@@ -58,7 +64,7 @@ impl AddinCookie {
                 registrar,
                 governance_program_id: realm.governance.program_id,
                 realm: realm.realm,
-                realm_community_mint: community_token_mint,
+                realm_governing_token_mint: community_token_mint,
                 registrar_authority: realm.authority,
                 payer: payer.pubkey(),
                 system_program: solana_sdk::system_program::id(),
@@ -104,7 +110,11 @@ impl AddinCookie {
             &deposit_mint,
         );
         let (voting_mint, _voting_mint_bump) = Pubkey::find_program_address(
-            &[&registrar.address.to_bytes(), &deposit_mint.to_bytes()],
+            &[
+                &registrar.address.to_bytes(),
+                b"voting_mint".as_ref(),
+                &deposit_mint.to_bytes(),
+            ],
             &self.program_id,
         );
 
@@ -164,6 +174,7 @@ impl AddinCookie {
         let (voter, voter_bump) = Pubkey::find_program_address(
             &[
                 &registrar.address.to_bytes(),
+                b"voter".as_ref(),
                 &authority.pubkey().to_bytes(),
             ],
             &self.program_id,

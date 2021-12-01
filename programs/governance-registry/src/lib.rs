@@ -75,7 +75,7 @@ pub mod governance_registry {
         registrar.bump = registrar_bump;
         registrar.governance_program_id = ctx.accounts.governance_program_id.key();
         registrar.realm = ctx.accounts.realm.key();
-        registrar.realm_community_mint = ctx.accounts.realm_community_mint.key();
+        registrar.realm_governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
         registrar.registrar_authority = ctx.accounts.registrar_authority.key();
         registrar.vote_weight_decimals = vote_weight_decimals;
         registrar.time_offset = 0;
@@ -138,7 +138,7 @@ pub mod governance_registry {
         // Init the voter weight record.
         voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
         voter_weight_record.realm = registrar.realm;
-        voter_weight_record.governing_token_mint = registrar.realm_community_mint;
+        voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
         voter_weight_record.governing_token_owner = ctx.accounts.voter_authority.key();
 
         Ok(())
@@ -242,29 +242,21 @@ pub mod governance_registry {
             )
             .unwrap();
 
+        let registrar_seeds = registrar_seeds!(registrar);
+
         // Thaw the account if it's frozen, so that we can mint.
         if ctx.accounts.voting_token.is_frozen() {
-            token::thaw_account(
-                ctx.accounts
-                    .thaw_ctx()
-                    .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-            )?;
+            token::thaw_account(ctx.accounts.thaw_ctx().with_signer(&[registrar_seeds]))?;
         }
 
         // Mint vote tokens to the depositor.
         token::mint_to(
-            ctx.accounts
-                .mint_to_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+            ctx.accounts.mint_to_ctx().with_signer(&[registrar_seeds]),
             amount,
         )?;
 
         // Freeze the vote tokens; they are just used for UIs + accounting.
-        token::freeze_account(
-            ctx.accounts
-                .freeze_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
+        token::freeze_account(ctx.accounts.freeze_ctx().with_signer(&[registrar_seeds]))?;
 
         Ok(())
     }
@@ -284,7 +276,7 @@ pub mod governance_registry {
         let token_owner_record_address_seeds =
             token_owner_record::get_token_owner_record_address_seeds(
                 &registrar.realm,
-                &registrar.realm_community_mint,
+                &registrar.realm_governing_token_mint,
                 &token_owner,
             );
         let token_owner_record_data = token_owner_record::get_token_owner_record_data_for_seeds(
@@ -332,30 +324,22 @@ pub mod governance_registry {
         // Update deposit book keeping.
         deposit_entry.amount_deposited_native -= amount;
 
+        let registrar_seeds = registrar_seeds!(registrar);
+
         // Transfer the tokens to withdraw.
         token::transfer(
-            ctx.accounts
-                .transfer_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
+            ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
             amount,
         )?;
 
         // Unfreeze the voting token.
-        token::thaw_account(
-            ctx.accounts
-                .thaw_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
+        token::thaw_account(ctx.accounts.thaw_ctx().with_signer(&[registrar_seeds]))?;
 
         // Burn the voting tokens.
         token::burn(ctx.accounts.burn_ctx(), amount)?;
 
         // Re-freeze the vote token.
-        token::freeze_account(
-            ctx.accounts
-                .freeze_ctx()
-                .with_signer(&[&[registrar.realm.as_ref(), &[registrar.bump]]]),
-        )?;
+        token::freeze_account(ctx.accounts.freeze_ctx().with_signer(&[registrar_seeds]))?;
 
         Ok(())
     }

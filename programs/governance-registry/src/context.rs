@@ -11,10 +11,10 @@ pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
 #[instruction(vote_weight_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
     /// a voting registrar. There can only be a single registrar
-    /// per governance realm.
+    /// per governance realm and governing mint.
     #[account(
         init,
-        seeds = [realm.key().as_ref()],
+        seeds = [realm.key().as_ref(), b"registrar".as_ref(), realm_governing_token_mint.key().as_ref()],
         bump = registrar_bump,
         payer = payer,
         space = 8 + size_of::<Registrar>()
@@ -24,7 +24,7 @@ pub struct CreateRegistrar<'info> {
 
     pub governance_program_id: UncheckedAccount<'info>,
     pub realm: UncheckedAccount<'info>,
-    pub realm_community_mint: Account<'info, Mint>,
+    pub realm_governing_token_mint: Account<'info, Mint>,
 
     // TODO: Allow registrar creation only for realm_authority!
     #[account(mut)]
@@ -53,7 +53,7 @@ pub struct CreateExchangeRate<'info> {
 
     #[account(
         init,
-        seeds = [registrar.key().as_ref(), deposit_mint.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voting_mint".as_ref(), deposit_mint.key().as_ref()],
         bump,
         payer = payer,
         mint::authority = registrar,
@@ -78,7 +78,7 @@ pub struct CreateVoter<'info> {
 
     #[account(
         init,
-        seeds = [registrar.key().as_ref(), voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter_bump,
         payer = payer,
         space = 8 + size_of::<Voter>(),
@@ -144,7 +144,7 @@ pub struct UpdateDeposit<'info> {
     pub voting_token: Account<'info, TokenAccount>,
     #[account(
         mut,
-        seeds = [registrar.key().as_ref(), deposit_token.mint.as_ref()],
+        seeds = [registrar.key().as_ref(), b"voting_mint".as_ref(), deposit_token.mint.as_ref()],
         bump,
     )]
     pub voting_mint: Account<'info, Mint>,
@@ -225,7 +225,7 @@ pub struct Withdraw<'info> {
     pub voting_token: Account<'info, TokenAccount>,
     #[account(
         mut,
-        seeds = [registrar.key().as_ref(), withdraw_mint.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voting_mint".as_ref(), withdraw_mint.key().as_ref()],
         bump,
     )]
     pub voting_mint: Account<'info, Mint>,

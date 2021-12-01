@@ -184,7 +184,7 @@ describe("voting-rights", () => {
         registrar,
         governanceProgramId,
         realm,
-        realmCommunityMint,
+        realmGoverningTokenMint: realmCommunityMint,
         registrarAuthority: program.provider.wallet.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram,

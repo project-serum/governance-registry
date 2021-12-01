@@ -39,7 +39,7 @@ pub struct Registrar {
     pub governance_program_id: Pubkey,
     pub registrar_authority: Pubkey,
     pub realm: Pubkey,
-    pub realm_community_mint: Pubkey,
+    pub realm_governing_token_mint: Pubkey,
     pub bump: u8,
     // The length should be adjusted for one's use case.
     pub rates: [ExchangeRateEntry; 2],
@@ -52,6 +52,18 @@ pub struct Registrar {
 
     /// Debug only: time offset, to allow tests to move forward in time.
     pub time_offset: i64,
+}
+
+#[macro_export]
+macro_rules! registrar_seeds {
+    ( $registrar:expr ) => {
+        &[
+            $registrar.realm.as_ref(),
+            b"registrar".as_ref(),
+            $registrar.realm_governing_token_mint.as_ref(),
+            &[$registrar.bump],
+        ]
+    };
 }
 
 impl Registrar {
