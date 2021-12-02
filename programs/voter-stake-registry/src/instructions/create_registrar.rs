@@ -8,7 +8,7 @@ use std::mem::size_of;
 #[derive(Accounts)]
 #[instruction(vote_weight_decimals: u8, registrar_bump: u8)]
 pub struct CreateRegistrar<'info> {
-    /// a voting registrar. There can only be a single registrar
+    /// The voting registrar. There can only be a single registrar
     /// per governance realm and governing mint.
     #[account(
         init,
@@ -19,16 +19,22 @@ pub struct CreateRegistrar<'info> {
     )]
     pub registrar: Box<Account<'info, Registrar>>,
 
-    // realm is validated in the instruction:
-    // - realm is owned by the governance_program_id
-    // - realm_governing_token_mint must be the community or council mint
-    // - realm_authority is realm.authority
+    /// An spl-governance realm
+    ///
+    /// realm is validated in the instruction:
+    /// - realm is owned by the governance_program_id
+    /// - realm_governing_token_mint must be the community or council mint
+    /// - realm_authority is realm.authority
     pub realm: UncheckedAccount<'info>,
 
+    /// The program id of the spl-governance program the realm belongs to.
     pub governance_program_id: UncheckedAccount<'info>,
+    /// Either the realm community mint or the council mint.
     pub realm_governing_token_mint: Account<'info, Mint>,
     pub realm_authority: Signer<'info>,
 
+    /// The authority that may use the clawback() instruction
+    // TODO: Just use the realm_authority?
     pub clawback_authority: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -39,8 +45,13 @@ pub struct CreateRegistrar<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-/// Creates a new voting registrar. There can only be a single registrar
-/// per governance realm.
+/// Creates a new voting registrar.
+///
+/// `vote_weight_decimals` is the number of decimals used on the vote weight. It must be
+/// larger or equal to all token mints used for voting.
+///
+/// To use the registrar, call CreateExchangeRate to register token mints that may be
+/// used for voting.
 pub fn create_registrar(
     ctx: Context<CreateRegistrar>,
     vote_weight_decimals: u8,

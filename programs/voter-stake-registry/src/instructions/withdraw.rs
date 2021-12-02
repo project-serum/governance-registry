@@ -28,7 +28,7 @@ pub struct WithdrawOrClawback<'info> {
         associated_token::authority = registrar,
         associated_token::mint = withdraw_mint,
     )]
-    pub exchange_vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     pub withdraw_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
@@ -41,7 +41,7 @@ impl<'info> WithdrawOrClawback<'info> {
     pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
         let program = self.token_program.to_account_info();
         let accounts = token::Transfer {
-            from: self.exchange_vault.to_account_info(),
+            from: self.vault.to_account_info(),
             to: self.destination.to_account_info(),
             authority: self.registrar.to_account_info(),
         };

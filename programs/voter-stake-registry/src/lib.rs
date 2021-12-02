@@ -70,11 +70,10 @@ pub mod voter_stake_registry {
     pub fn create_exchange_rate(
         ctx: Context<CreateExchangeRate>,
         idx: u16,
-        mint: Pubkey,
         rate: u64,
         decimals: u8,
     ) -> Result<()> {
-        instructions::create_exchange_rate(ctx, idx, mint, rate, decimals)
+        instructions::create_exchange_rate(ctx, idx, rate, decimals)
     }
 
     pub fn create_voter(

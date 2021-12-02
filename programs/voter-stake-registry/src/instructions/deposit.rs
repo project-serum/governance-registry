@@ -17,19 +17,18 @@ pub struct Deposit<'info> {
         associated_token::authority = registrar,
         associated_token::mint = deposit_mint,
     )]
-    pub exchange_vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     pub deposit_mint: Box<Account<'info, Mint>>,
-    #[account(mut)]
-    pub deposit_authority: Signer<'info>,
+
     #[account(
         mut,
         constraint = deposit_token.mint == deposit_mint.key(),
         constraint = deposit_token.owner == deposit_authority.key(),
     )]
     pub deposit_token: Box<Account<'info, TokenAccount>>,
+    pub deposit_authority: Signer<'info>,
 
     pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -39,7 +38,7 @@ impl<'info> Deposit<'info> {
         let program = self.token_program.to_account_info();
         let accounts = token::Transfer {
             from: self.deposit_token.to_account_info(),
-            to: self.exchange_vault.to_account_info(),
+            to: self.vault.to_account_info(),
             authority: self.deposit_authority.to_account_info(),
         };
         CpiContext::new(program, accounts)
