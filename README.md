@@ -55,8 +55,9 @@ realm authority to:
    withdrawing funds without lockup. If it's the voter's first deposit entry,
    it will have deposit id 0.
 3. Call `Deposit` for the voter and deposit id to deposit funds.
-4. To vote, call `UpdateVoterWeightRecord` on the addin and then vote with that
-   on spl-governance in the same transaction.
+4. To vote, call `UpdateVoterWeightRecord` on the addin and then call `CastVote`
+   on spl-governance in the same transaction, passing the voter weight record
+   to both.
 5. Withdraw funds with `Withdraw` once proposals have resolved.
 
 ## Give Grants of Locked Tokens
