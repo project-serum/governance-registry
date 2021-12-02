@@ -44,7 +44,10 @@ pub struct CreateVoter<'info> {
 }
 
 /// Creates a new voter account. There can only be a single voter per
-/// user wallet.
+/// voter_authority.
+///
+/// The user must register with spl-governance using the same voter_authority.
+/// Their token owner record will be required for withdrawing funds later.
 pub fn create_voter(
     ctx: Context<CreateVoter>,
     voter_bump: u8,

@@ -17,6 +17,14 @@ pub struct CreateDepositEntry<'info> {
 }
 
 /// Creates a new deposit entry.
+///
+/// Initializes the first free deposit entry with the requested settings.
+/// Will error if no free deposit entries remain.
+///
+/// `kind`: Type of lockup to use.
+/// `period`: How long to lock up, depending on `kind`. See LockupKind::period_secs()
+/// `allow_clawback`: When enabled, the the clawback_authority is allowed to
+///                   unilaterally claim locked tokens.
 pub fn create_deposit_entry(
     ctx: Context<CreateDepositEntry>,
     kind: LockupKind,

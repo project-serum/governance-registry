@@ -45,7 +45,14 @@ impl<'info> Deposit<'info> {
     }
 }
 
-/// Adds tokens to a deposit entry by depositing tokens into the registrar.
+/// Adds tokens to a deposit entry.
+///
+/// Tokens will be transfered from deposit_token to vault using the deposit_authority.
+///
+/// The deposit entry must have been initialized with create_deposit_entry.
+///
+/// `id`: Index of the deposit entry.
+/// `amount`: Number of native tokens to transfer.
 pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
     msg!("--------update_deposit--------");
     let registrar = &ctx.accounts.registrar;
