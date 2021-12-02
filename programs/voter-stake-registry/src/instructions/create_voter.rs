@@ -2,8 +2,6 @@ use crate::account::*;
 use crate::error::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::Token;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
 use std::mem::size_of;
 
