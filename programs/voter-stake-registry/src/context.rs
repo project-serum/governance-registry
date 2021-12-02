@@ -103,12 +103,14 @@ pub struct CreateVoter<'info> {
 }
 
 #[derive(Accounts)]
-pub struct CreateDeposit<'info> {
-    pub deposit: UpdateDeposit<'info>,
-    #[account(
-        constraint = voter_authority.key() == deposit.voter.load()?.voter_authority,
-    )]
+pub struct CreateDepositEntry<'info> {
+    pub registrar: Box<Account<'info, Registrar>>,
+
+    #[account(mut, has_one = registrar, has_one = voter_authority)]
+    pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
+
+    pub deposit_mint: Box<Account<'info, Mint>>,
 }
 
 #[derive(Accounts)]

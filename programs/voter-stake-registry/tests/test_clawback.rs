@@ -76,17 +76,26 @@ async fn test_clawback() -> Result<(), TransportError> {
     println!("create_deposit");
     context
         .addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
             voter_authority,
             &mngo_rate,
-            realm_authority,
-            realm_authority_ata,
             voter_stake_registry::account::LockupKind::Daily,
-            10000,
             10,
             true,
+        )
+        .await?;
+    context
+        .addin
+        .update_deposit(
+            &registrar,
+            &voter,
+            &mngo_rate,
+            &realm_authority,
+            realm_authority_ata,
+            0,
+            10000,
         )
         .await?;
 

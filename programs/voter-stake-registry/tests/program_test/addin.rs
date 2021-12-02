@@ -224,42 +224,30 @@ impl AddinCookie {
         }
     }
 
-    pub async fn create_deposit(
+    pub async fn create_deposit_entry(
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         voter_authority: &Keypair,
         exchange_rate: &ExchangeRateCookie,
-        deposit_authority: &Keypair,
-        token_address: Pubkey,
         lockup_kind: voter_stake_registry::account::LockupKind,
-        amount: u64,
         periods: i32,
         allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
-        let data =
-            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::CreateDeposit {
+        let data = anchor_lang::InstructionData::data(
+            &voter_stake_registry::instruction::CreateDepositEntry {
                 kind: lockup_kind,
-                amount,
                 periods,
                 allow_clawback,
-            });
+            },
+        );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::CreateDeposit {
-                deposit: voter_stake_registry::accounts::UpdateDeposit {
-                    registrar: registrar.address,
-                    voter: voter.address,
-                    exchange_vault: exchange_rate.exchange_vault,
-                    deposit_token: token_address,
-                    deposit_authority: deposit_authority.pubkey(),
-                    deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
-                    token_program: spl_token::id(),
-                    associated_token_program: spl_associated_token_account::id(),
-                    system_program: solana_sdk::system_program::id(),
-                    rent: solana_program::sysvar::rent::id(),
-                },
+            &voter_stake_registry::accounts::CreateDepositEntry {
+                registrar: registrar.address,
+                voter: voter.address,
                 voter_authority: voter_authority.pubkey(),
+                deposit_mint: exchange_rate.deposit_mint.pubkey.unwrap(),
             },
             None,
         );
@@ -272,10 +260,9 @@ impl AddinCookie {
 
         // clone the secrets
         let signer1 = Keypair::from_base58_string(&voter_authority.to_base58_string());
-        let signer2 = Keypair::from_base58_string(&deposit_authority.to_base58_string());
 
         self.solana
-            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
+            .process_transaction(&instructions, Some(&[&signer1]))
             .await
     }
 

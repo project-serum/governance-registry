@@ -160,59 +160,50 @@ pub mod voter_stake_registry {
         Ok(())
     }
 
-    /// Creates a new deposit entry and updates it by transferring in tokens.
-    pub fn create_deposit(
-        ctx: Context<CreateDeposit>,
+    /// Creates a new deposit entry.
+    pub fn create_deposit_entry(
+        ctx: Context<CreateDepositEntry>,
         kind: LockupKind,
-        amount: u64,
         periods: i32,
         allow_clawback: bool,
     ) -> Result<()> {
         msg!("--------create_deposit--------");
-        // Creates the new deposit.
-        let deposit_id = {
-            // Load accounts.
-            let registrar = &ctx.accounts.deposit.registrar;
-            let voter = &mut ctx.accounts.deposit.voter.load_mut()?;
 
-            // Set the lockup start timestamp.
-            let start_ts = registrar.clock_unix_timestamp();
+        // Load accounts.
+        let registrar = &ctx.accounts.registrar;
+        let voter = &mut ctx.accounts.voter.load_mut()?;
 
-            // Get the exchange rate entry associated with this deposit.
-            let er_idx = registrar
-                .rates
-                .iter()
-                .position(|r| r.mint == ctx.accounts.deposit.deposit_mint.key())
-                .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+        // Set the lockup start timestamp.
+        let start_ts = registrar.clock_unix_timestamp();
 
-            // Get and set up the first free deposit entry.
-            let free_entry_idx = voter
-                .deposits
-                .iter()
-                .position(|d_entry| !d_entry.is_used)
-                .ok_or(ErrorCode::DepositEntryFull)?;
-            let d_entry = &mut voter.deposits[free_entry_idx];
-            d_entry.is_used = true;
-            d_entry.rate_idx = free_entry_idx as u8;
-            d_entry.rate_idx = er_idx as u8;
-            d_entry.amount_deposited_native = 0;
-            d_entry.amount_initially_locked_native = 0;
-            d_entry.allow_clawback = allow_clawback;
-            d_entry.lockup = Lockup {
-                kind,
-                start_ts,
-                end_ts: start_ts
-                    .checked_add(i64::from(periods).checked_mul(kind.period_secs()).unwrap())
-                    .unwrap(),
-                padding: [0u8; 16],
-            };
+        // Get the exchange rate entry associated with this deposit.
+        let er_idx = registrar
+            .rates
+            .iter()
+            .position(|r| r.mint == ctx.accounts.deposit_mint.key())
+            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
 
-            free_entry_idx as u8
+        // Get and set up the first free deposit entry.
+        let free_entry_idx = voter
+            .deposits
+            .iter()
+            .position(|d_entry| !d_entry.is_used)
+            .ok_or(ErrorCode::DepositEntryFull)?;
+        let d_entry = &mut voter.deposits[free_entry_idx];
+        d_entry.is_used = true;
+        d_entry.rate_idx = free_entry_idx as u8;
+        d_entry.rate_idx = er_idx as u8;
+        d_entry.amount_deposited_native = 0;
+        d_entry.amount_initially_locked_native = 0;
+        d_entry.allow_clawback = allow_clawback;
+        d_entry.lockup = Lockup {
+            kind,
+            start_ts,
+            end_ts: start_ts
+                .checked_add(i64::from(periods).checked_mul(kind.period_secs()).unwrap())
+                .unwrap(),
+            padding: [0u8; 16],
         };
-
-        // Updates the entry by transferring in tokens.
-        let update_ctx = Context::new(ctx.program_id, &mut ctx.accounts.deposit, &[]);
-        update_deposit(update_ctx, deposit_id, amount)?;
 
         Ok(())
     }

@@ -118,20 +118,18 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
     assert_eq!(initial.deposit, 0);
 
     addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
-            voter_authority,
-            &mngo_rate,
             &voter_authority,
-            reference_account,
+            &mngo_rate,
             voter_stake_registry::account::LockupKind::Monthly,
-            9000,
             3,
             false,
         )
         .await
         .unwrap();
+    update_deposit(9000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);

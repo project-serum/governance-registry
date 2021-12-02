@@ -104,14 +104,14 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             amount,
         )
     };
-    let update_deposit = |amount: u64| {
+    let update_deposit = |deposit_id: u8, amount: u64| {
         addin.update_deposit(
             &registrar,
             &voter,
             &mngo_rate,
             &voter_authority,
             reference_account,
-            0,
+            deposit_id,
             amount,
         )
     };
@@ -122,20 +122,18 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(initial.deposit, 0);
 
     addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
-            voter_authority,
-            &mngo_rate,
             &voter_authority,
-            reference_account,
+            &mngo_rate,
             voter_stake_registry::account::LockupKind::None,
-            10000,
             0,
             false,
         )
         .await
         .unwrap();
+    update_deposit(0, 10000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -144,7 +142,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 10000);
 
     // add to the existing deposit 0
-    update_deposit(5000).await.unwrap();
+    update_deposit(0, 5000).await.unwrap();
 
     let after_deposit2 = get_balances(0).await;
     assert_eq!(initial.token, after_deposit2.token + after_deposit2.vault);
@@ -154,20 +152,18 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
 
     // create a separate deposit (index 1)
     addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
-            voter_authority,
-            &mngo_rate,
             &voter_authority,
-            reference_account,
+            &mngo_rate,
             voter_stake_registry::account::LockupKind::None,
-            7000,
             0,
             false,
         )
         .await
         .unwrap();
+    update_deposit(1, 7000).await.unwrap();
 
     withdraw(10000)
         .await
@@ -233,19 +229,29 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
 
     // now voter2 deposits
     addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter2,
-            voter2_authority,
+            &voter2_authority,
+            &mngo_rate,
+            voter_stake_registry::account::LockupKind::None,
+            5, // shouldn't matter
+            false,
+        )
+        .await
+        .unwrap();
+    addin
+        .update_deposit(
+            &registrar,
+            &voter2,
             &mngo_rate,
             &voter2_authority,
             context.users[2].token_accounts[0],
-            voter_stake_registry::account::LockupKind::None,
+            0,
             1000,
-            5,
-            false,
         )
-        .await?;
+        .await
+        .unwrap();
 
     let voter2_balances = balances(
         &context,
@@ -262,17 +268,26 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
 
     // when voter1 deposits again, they can reuse deposit index 0
     addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
-            voter_authority,
+            &voter_authority,
+            &mngo_rate,
+            voter_stake_registry::account::LockupKind::None,
+            1, // shouldn't matter
+            false,
+        )
+        .await
+        .unwrap();
+    addin
+        .update_deposit(
+            &registrar,
+            &voter,
             &mngo_rate,
             &voter_authority,
             reference_account,
-            voter_stake_registry::account::LockupKind::Monthly,
+            0,
             3000,
-            1,
-            false,
         )
         .await
         .unwrap();

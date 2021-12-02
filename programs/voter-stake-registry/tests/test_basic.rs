@@ -57,17 +57,26 @@ async fn test_basic() -> Result<(), TransportError> {
 
     context
         .addin
-        .create_deposit(
+        .create_deposit_entry(
             &registrar,
             &voter,
             voter_authority,
             &mngo_rate,
-            &voter_authority,
-            reference_account,
             voter_stake_registry::account::LockupKind::Cliff,
-            10000,
             0,
             false,
+        )
+        .await?;
+    context
+        .addin
+        .update_deposit(
+            &registrar,
+            &voter,
+            &mngo_rate,
+            &voter_authority,
+            reference_account,
+            0,
+            10000,
         )
         .await?;
 
