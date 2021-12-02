@@ -196,15 +196,15 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
 
     // Close the empty deposit (closing deposits 1 and 2 fails)
     addin
-        .close_deposit(&voter, &voter_authority, 2)
+        .close_deposit_entry(&voter, &voter_authority, 2)
         .await
         .expect_err("deposit not in use");
     addin
-        .close_deposit(&voter, &voter_authority, 1)
+        .close_deposit_entry(&voter, &voter_authority, 1)
         .await
         .expect_err("deposit not empty");
     addin
-        .close_deposit(&voter, &voter_authority, 0)
+        .close_deposit_entry(&voter, &voter_authority, 0)
         .await
         .unwrap();
 

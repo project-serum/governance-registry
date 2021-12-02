@@ -379,7 +379,7 @@ pub mod voter_stake_registry {
     }
 
     /// Close an empty deposit, allowing it to be reused in the future
-    pub fn close_deposit(ctx: Context<CloseDeposit>, deposit_id: u8) -> Result<()> {
+    pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_id: u8) -> Result<()> {
         msg!("--------close_deposit--------");
         let voter = &mut ctx.accounts.voter.load_mut()?;
 

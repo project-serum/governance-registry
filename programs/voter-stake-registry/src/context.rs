@@ -200,7 +200,7 @@ impl<'info> WithdrawOrClawback<'info> {
 }
 
 #[derive(Accounts)]
-pub struct CloseDeposit<'info> {
+pub struct CloseDepositEntry<'info> {
     #[account(mut, has_one = voter_authority)]
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,

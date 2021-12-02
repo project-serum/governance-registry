@@ -435,19 +435,18 @@ impl AddinCookie {
             .await)
     }
 
-    pub async fn close_deposit(
+    pub async fn close_deposit_entry(
         &self,
         voter: &VoterCookie,
         authority: &Keypair,
         deposit_id: u8,
     ) -> Result<(), TransportError> {
-        let data =
-            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::CloseDeposit {
-                deposit_id,
-            });
+        let data = anchor_lang::InstructionData::data(
+            &voter_stake_registry::instruction::CloseDepositEntry { deposit_id },
+        );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::CloseDeposit {
+            &voter_stake_registry::accounts::CloseDepositEntry {
                 voter: voter.address,
                 voter_authority: authority.pubkey(),
             },
