@@ -80,7 +80,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &voter,
             voter_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::Daily,
+            voter_stake_registry::state::lockup::LockupKind::Daily,
             10,
             true,
         )

@@ -3,6 +3,7 @@ use solana_program_test::*;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transport::TransportError};
 
 use program_test::*;
+use voter_stake_registry::state::lockup::LockupKind;
 
 mod program_test;
 
@@ -127,7 +128,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::None,
+            LockupKind::None,
             0,
             false,
         )
@@ -157,7 +158,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::None,
+            LockupKind::None,
             0,
             false,
         )
@@ -234,7 +235,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter2,
             &voter2_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::None,
+            LockupKind::None,
             5, // shouldn't matter
             false,
         )
@@ -273,7 +274,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::None,
+            LockupKind::None,
             1, // shouldn't matter
             false,
         )

@@ -1,12 +1,11 @@
-use account::*;
 use anchor_lang::prelude::*;
 use error::*;
 use instructions::*;
+use state::lockup::*;
 
-#[macro_use]
-pub mod account;
 mod error;
 mod instructions;
+pub mod state;
 
 // The program address.
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");

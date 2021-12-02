@@ -1,5 +1,6 @@
-use crate::account::*;
 use crate::error::*;
+use crate::state::lockup::*;
+use crate::state::registrar::registrar_seeds;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
 

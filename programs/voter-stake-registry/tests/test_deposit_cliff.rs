@@ -122,7 +122,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
-            voter_stake_registry::account::LockupKind::Cliff,
+            voter_stake_registry::state::lockup::LockupKind::Cliff,
             3, // days
             false,
         )
