@@ -1,17 +1,12 @@
-use access_control::*;
 use account::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint};
-use context::*;
 use error::*;
-use spl_governance::addins::voter_weight::VoterWeightAccountType;
-use spl_governance::state::{realm, token_owner_record};
-use std::{convert::TryFrom, str::FromStr};
+use instructions::*;
 
-mod access_control;
+#[macro_use]
 pub mod account;
-mod context;
 mod error;
+mod instructions;
 
 // The program address.
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -64,46 +59,14 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod voter_stake_registry {
     use super::*;
 
-    /// Creates a new voting registrar. There can only be a single registrar
-    /// per governance realm.
     pub fn create_registrar(
         ctx: Context<CreateRegistrar>,
         vote_weight_decimals: u8,
         registrar_bump: u8,
     ) -> Result<()> {
-        msg!("--------create_registrar--------");
-        let registrar = &mut ctx.accounts.registrar;
-        registrar.bump = registrar_bump;
-        registrar.governance_program_id = ctx.accounts.governance_program_id.key();
-        registrar.realm = ctx.accounts.realm.key();
-        registrar.realm_governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
-        registrar.realm_authority = ctx.accounts.realm_authority.key();
-        registrar.clawback_authority = ctx.accounts.clawback_authority.key();
-        registrar.vote_weight_decimals = vote_weight_decimals;
-        registrar.time_offset = 0;
-
-        // Verify that "realm_authority" is the expected authority on "realm"
-        // and that the mint matches one of the realm mints too.
-        let realm = realm::get_realm_data_for_governing_token_mint(
-            &registrar.governance_program_id,
-            &ctx.accounts.realm.to_account_info(),
-            &registrar.realm_governing_token_mint,
-        )?;
-        require!(
-            realm.authority.unwrap() == ctx.accounts.realm_authority.key(),
-            ErrorCode::InvalidRealmAuthority
-        );
-
-        Ok(())
+        instructions::create_registrar(ctx, vote_weight_decimals, registrar_bump)
     }
 
-    /// Creates a new exchange rate for a given mint. This allows a voter to
-    /// deposit the mint in exchange for vTokens. There can only be a single
-    /// exchange rate per mint.
-    ///
-    /// WARNING: This can be freely called when any of the rates are empty.
-    ///          This should be called immediately upon creation of a Registrar.
-    #[access_control(rate_is_empty(&ctx, idx))]
     pub fn create_exchange_rate(
         ctx: Context<CreateExchangeRate>,
         idx: u16,
@@ -111,406 +74,59 @@ pub mod voter_stake_registry {
         rate: u64,
         decimals: u8,
     ) -> Result<()> {
-        msg!("--------create_exchange_rate--------");
-        require!(rate > 0, InvalidRate);
-        let registrar = &mut ctx.accounts.registrar;
-        registrar.rates[idx as usize] = registrar.new_rate(mint, decimals, rate)?;
-        Ok(())
+        instructions::create_exchange_rate(ctx, idx, mint, rate, decimals)
     }
 
-    /// Creates a new voter account. There can only be a single voter per
-    /// user wallet.
     pub fn create_voter(
         ctx: Context<CreateVoter>,
         voter_bump: u8,
         voter_weight_record_bump: u8,
     ) -> Result<()> {
-        msg!("--------create_voter--------");
-        // Forbid creating voter accounts from CPI. The goal is to make automation
-        // impossible that weakens some of the limitations intentionally imposed on
-        // locked tokens.
-        {
-            use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
-            let ixns = ctx.accounts.instructions.to_account_info();
-            let current_index = tx_instructions::load_current_index_checked(&ixns)? as usize;
-            let current_ixn = tx_instructions::load_instruction_at_checked(current_index, &ixns)?;
-            require!(
-                current_ixn.program_id == *ctx.program_id,
-                ErrorCode::ForbiddenCpi
-            );
-        }
-
-        // Load accounts.
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_init()?;
-        let voter_weight_record = &mut ctx.accounts.voter_weight_record;
-
-        // Init the voter.
-        voter.voter_bump = voter_bump;
-        voter.voter_weight_record_bump = voter_weight_record_bump;
-        voter.voter_authority = ctx.accounts.voter_authority.key();
-        voter.registrar = ctx.accounts.registrar.key();
-
-        // Init the voter weight record.
-        voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
-        voter_weight_record.realm = registrar.realm;
-        voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
-        voter_weight_record.governing_token_owner = ctx.accounts.voter_authority.key();
-
-        Ok(())
+        instructions::create_voter(ctx, voter_bump, voter_weight_record_bump)
     }
 
-    /// Creates a new deposit entry.
     pub fn create_deposit_entry(
         ctx: Context<CreateDepositEntry>,
         kind: LockupKind,
         periods: i32,
         allow_clawback: bool,
     ) -> Result<()> {
-        msg!("--------create_deposit--------");
-
-        // Load accounts.
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_mut()?;
-
-        // Set the lockup start timestamp.
-        let start_ts = registrar.clock_unix_timestamp();
-
-        // Get the exchange rate entry associated with this deposit.
-        let er_idx = registrar
-            .rates
-            .iter()
-            .position(|r| r.mint == ctx.accounts.deposit_mint.key())
-            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-
-        // Get and set up the first free deposit entry.
-        let free_entry_idx = voter
-            .deposits
-            .iter()
-            .position(|d_entry| !d_entry.is_used)
-            .ok_or(ErrorCode::DepositEntryFull)?;
-        let d_entry = &mut voter.deposits[free_entry_idx];
-        d_entry.is_used = true;
-        d_entry.rate_idx = free_entry_idx as u8;
-        d_entry.rate_idx = er_idx as u8;
-        d_entry.amount_deposited_native = 0;
-        d_entry.amount_initially_locked_native = 0;
-        d_entry.allow_clawback = allow_clawback;
-        d_entry.lockup = Lockup {
-            kind,
-            start_ts,
-            end_ts: start_ts
-                .checked_add(i64::from(periods).checked_mul(kind.period_secs()).unwrap())
-                .unwrap(),
-            padding: [0u8; 16],
-        };
-
-        Ok(())
+        instructions::create_deposit_entry(ctx, kind, periods, allow_clawback)
     }
 
-    /// Adds tokens to a deposit entry by depositing tokens into the registrar.
     pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
-        msg!("--------update_deposit--------");
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_mut()?;
+        instructions::deposit(ctx, id, amount)
+    }
 
-        voter.last_deposit_slot = Clock::get()?.slot;
-
-        // Get the exchange rate entry associated with this deposit.
-        let er_idx = registrar
-            .rates
-            .iter()
-            .position(|r| r.mint == ctx.accounts.deposit_mint.key())
-            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-        let _er_entry = registrar.rates[er_idx];
-
-        require!(voter.deposits.len() > id as usize, InvalidDepositId);
-        let d_entry = &mut voter.deposits[id as usize];
-        require!(d_entry.is_used, InvalidDepositId);
-
-        // Deposit tokens into the registrar.
-        token::transfer(ctx.accounts.transfer_ctx(), amount)?;
-        d_entry.amount_deposited_native += amount;
-
-        // Adding funds to a lockup that is already in progress can be complicated
-        // for linear vesting schedules because all added funds should be paid out
-        // gradually over the remaining lockup duration.
-        // The logic used is to wrap up the current lockup, and create a new one
-        // for the expected remainder duration.
-        let curr_ts = registrar.clock_unix_timestamp();
-        d_entry.amount_initially_locked_native -= d_entry.vested(curr_ts)?;
-        d_entry.amount_initially_locked_native += amount;
-        d_entry.lockup.start_ts = d_entry
-            .lockup
-            .start_ts
-            .checked_add(
-                i64::try_from(d_entry.lockup.period_current(curr_ts)?)
-                    .unwrap()
-                    .checked_mul(d_entry.lockup.kind.period_secs())
-                    .unwrap(),
-            )
-            .unwrap();
-
-        Ok(())
+    pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -> Result<()> {
+        instructions::withdraw(ctx, deposit_id, amount)
     }
 
     pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_id: u8) -> Result<()> {
-        msg!("--------clawback--------");
-        // Load the accounts.
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_mut()?;
-        require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
-        require!(
-            ctx.accounts.authority.key() == registrar.clawback_authority,
-            InvalidAuthority
-        );
-
-        // Get the deposit being withdrawn from.
-        let curr_ts = registrar.clock_unix_timestamp();
-        let deposit_entry = &mut voter.deposits[deposit_id as usize];
-        require!(deposit_entry.is_used, InvalidDepositId);
-        require!(
-            deposit_entry.allow_clawback,
-            ErrorCode::ClawbackNotAllowedOnDeposit
-        );
-        let unvested_amount =
-            deposit_entry.amount_initially_locked_native - deposit_entry.vested(curr_ts).unwrap();
-
-        // sanity check only
-        require!(
-            deposit_entry.amount_deposited_native >= unvested_amount,
-            InsufficientVestedTokens
-        );
-
-        // Transfer the tokens to withdraw.
-        let registrar_seeds = registrar_seeds!(registrar);
-        token::transfer(
-            ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
-            unvested_amount,
-        )?;
-
-        // Update deposit book keeping.
-        deposit_entry.amount_deposited_native -= unvested_amount;
-
-        // Now that all locked funds are withdrawn, end the lockup
-        deposit_entry.amount_initially_locked_native = 0;
-        deposit_entry.lockup.kind = LockupKind::None;
-        deposit_entry.lockup.start_ts = registrar.clock_unix_timestamp();
-        deposit_entry.lockup.end_ts = deposit_entry.lockup.start_ts;
-        deposit_entry.allow_clawback = false;
-
-        Ok(())
-    }
-    /// Withdraws tokens from a deposit entry, if they are unlocked according
-    /// to a vesting schedule.
-    ///
-    /// `amount` is in units of the native currency being withdrawn.
-    pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -> Result<()> {
-        msg!("--------withdraw--------");
-        // Load the accounts.
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_mut()?;
-        require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
-        require!(
-            ctx.accounts.authority.key() == voter.voter_authority,
-            InvalidAuthority
-        );
-
-        // Governance may forbid withdraws, for example when engaged in a vote.
-        let token_owner_record_data =
-            token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
-                &registrar.governance_program_id,
-                &ctx.accounts.token_owner_record.to_account_info(),
-                &registrar.realm,
-                &registrar.realm_governing_token_mint,
-            )?;
-        let token_owner = voter.voter_authority;
-        require!(
-            token_owner_record_data.governing_token_owner == token_owner,
-            InvalidTokenOwnerRecord
-        );
-        token_owner_record_data.assert_can_withdraw_governing_tokens()?;
-
-        // Must not withdraw in the same slot as depositing, to prevent people
-        // depositing, having the vote weight updated, withdrawing and then
-        // voting.
-        require!(
-            voter.last_deposit_slot < Clock::get()?.slot,
-            ErrorCode::InvalidToDepositAndWithdrawInOneSlot
-        );
-
-        // Get the deposit being withdrawn from.
-        let curr_ts = registrar.clock_unix_timestamp();
-        let deposit_entry = &mut voter.deposits[deposit_id as usize];
-        require!(deposit_entry.is_used, InvalidDepositId);
-        require!(
-            deposit_entry.amount_withdrawable(curr_ts) >= amount,
-            InsufficientVestedTokens
-        );
-        // technically unnecessary
-        require!(
-            deposit_entry.amount_deposited_native >= amount,
-            InsufficientVestedTokens
-        );
-
-        // Get the exchange rate for the token being withdrawn.
-        let er_idx = registrar
-            .rates
-            .iter()
-            .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
-            .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-        let _er_entry = registrar.rates[er_idx];
-        require!(
-            er_idx == deposit_entry.rate_idx as usize,
-            ErrorCode::InvalidMint
-        );
-
-        // Update deposit book keeping.
-        deposit_entry.amount_deposited_native -= amount;
-
-        // Transfer the tokens to withdraw.
-        let registrar_seeds = registrar_seeds!(registrar);
-        token::transfer(
-            ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
-            amount,
-        )?;
-
-        Ok(())
+        instructions::clawback(ctx, deposit_id)
     }
 
-    /// Close an empty deposit, allowing it to be reused in the future
     pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_id: u8) -> Result<()> {
-        msg!("--------close_deposit--------");
-        let voter = &mut ctx.accounts.voter.load_mut()?;
-
-        require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
-        let d = &mut voter.deposits[deposit_id as usize];
-        require!(d.is_used, InvalidDepositId);
-        require!(d.amount_deposited_native == 0, VotingTokenNonZero);
-
-        // Deposits that have clawback enabled are guaranteed to live until the end
-        // of their locking period. That ensures a deposit can't be closed and reopenend
-        // with a different locking kind or locking end time before funds are deposited.
-        if d.allow_clawback {
-            require!(
-                d.lockup.end_ts < Clock::get()?.unix_timestamp,
-                DepositStillLocked
-            );
-        }
-
-        d.is_used = false;
-        Ok(())
+        instructions::close_deposit_entry(ctx, deposit_id)
     }
 
-    /// Resets a lockup to start at the current slot timestamp and to last for
-    /// `periods`, which must be >= the number of periods left on the lockup.
-    /// This will re-lock any non-withdrawn vested funds.
-    pub fn reset_lockup(ctx: Context<UpdateSchedule>, deposit_id: u8, periods: i64) -> Result<()> {
-        msg!("--------reset_lockup--------");
-        let registrar = &ctx.accounts.registrar;
-        let voter = &mut ctx.accounts.voter.load_mut()?;
-        require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
-
-        let d = &mut voter.deposits[deposit_id as usize];
-        require!(d.is_used, InvalidDepositId);
-
-        // The lockup period can only be increased.
-        let curr_ts = registrar.clock_unix_timestamp();
-        require!(
-            periods as u64 >= d.lockup.periods_left(curr_ts)?,
-            InvalidDays
-        );
-
-        // TODO: Check for correctness
-        d.amount_initially_locked_native = d.amount_deposited_native;
-
-        d.lockup.start_ts = curr_ts;
-        d.lockup.end_ts = curr_ts
-            .checked_add(periods.checked_mul(d.lockup.kind.period_secs()).unwrap())
-            .unwrap();
-
-        Ok(())
+    pub fn reset_lockup(ctx: Context<ResetLockup>, deposit_id: u8, periods: i64) -> Result<()> {
+        instructions::reset_lockup(ctx, deposit_id, periods)
     }
 
-    /// Calculates the lockup-scaled, time-decayed voting power for the given
-    /// voter and writes it into a `VoteWeightRecord` account to be used by
-    /// the SPL governance program.
-    ///
-    /// This "revise" instruction should be called in the same transaction,
-    /// immediately before voting.
     pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
-        msg!("--------update_voter_weight_record--------");
-        let registrar = &ctx.accounts.registrar;
-        let voter = ctx.accounts.voter.load()?;
-        let record = &mut ctx.accounts.voter_weight_record;
-        record.voter_weight = voter.weight(&registrar)?;
-        record.voter_weight_expiry = Some(Clock::get()?.slot);
-
-        Ok(())
+        instructions::update_voter_weight_record(ctx)
     }
 
-    /// Calculates the max vote weight for the registry. This is a function
-    /// of the total supply of all exchange rate mints, converted into a
-    /// common currency with a common number of decimals.
-    ///
-    /// Note that this method is only safe to use if the cumulative supply for
-    /// all tokens fits into a u64 *after* converting into common decimals, as
-    /// defined by the registrar's `rate_decimal` field.
-    pub fn update_max_vote_weight<'info>(
-        ctx: Context<'_, '_, '_, 'info, UpdateMaxVoteWeight<'info>>,
-    ) -> Result<()> {
-        msg!("--------update_max_vote_weight--------");
-        let registrar = &ctx.accounts.registrar;
-        let _max_vote_weight = {
-            let total: Result<u64> = ctx
-                .remaining_accounts
-                .iter()
-                .map(|acc| Account::<Mint>::try_from(acc))
-                .collect::<std::result::Result<Vec<Account<Mint>>, ProgramError>>()?
-                .iter()
-                .try_fold(0u64, |sum, m| {
-                    let er_idx = registrar
-                        .rates
-                        .iter()
-                        .position(|r| r.mint == m.key())
-                        .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-                    let er_entry = registrar.rates[er_idx];
-                    let amount = er_entry.convert(m.supply);
-                    let total = sum.checked_add(amount).unwrap();
-                    Ok(total)
-                });
-            total?
-                .checked_mul(FIXED_VOTE_WEIGHT_FACTOR + LOCKING_VOTE_WEIGHT_FACTOR)
-                .unwrap()
-        };
-        // TODO: SPL governance has not yet implemented this feature.
-        //       When it has, probably need to write the result into an account,
-        //       similar to VoterWeightRecord.
-        Ok(())
+    pub fn update_max_vote_weight<'info>(ctx: Context<UpdateMaxVoteWeight>) -> Result<()> {
+        instructions::update_max_vote_weight(ctx)
     }
 
-    /// Closes the voter account, allowing one to retrieve rent exemption SOL.
-    /// Only accounts with no remaining deposits can be closed.
     pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
-        msg!("--------close_voter--------");
-        let voter = &ctx.accounts.voter.load()?;
-        let amount = voter.deposits.iter().fold(0u64, |sum, d| {
-            sum.checked_add(d.amount_deposited_native).unwrap()
-        });
-        require!(amount == 0, VotingTokenNonZero);
-        Ok(())
+        instructions::close_voter(ctx)
     }
 
     pub fn set_time_offset(ctx: Context<SetTimeOffset>, time_offset: i64) -> Result<()> {
-        msg!("--------set_time_offset--------");
-        let allowed_program =
-            Pubkey::from_str("GovernanceProgram11111111111111111111111111").unwrap();
-        let registrar = &mut ctx.accounts.registrar;
-        require!(
-            registrar.governance_program_id == allowed_program,
-            ErrorCode::DebugInstruction
-        );
-        registrar.time_offset = time_offset;
-        Ok(())
+        instructions::set_time_offset(ctx, time_offset)
     }
 }
