@@ -312,6 +312,7 @@ impl AddinCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn clawback(
         &self,
         registrar: &RegistrarCookie,
@@ -400,6 +401,7 @@ impl AddinCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn update_voter_weight_record(
         &self,
         registrar: &RegistrarCookie,
@@ -435,6 +437,7 @@ impl AddinCookie {
             .await)
     }
 
+    #[allow(dead_code)]
     pub async fn close_deposit_entry(
         &self,
         voter: &VoterCookie,
@@ -467,6 +470,7 @@ impl AddinCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn set_time_offset(
         &self,
         registrar: &RegistrarCookie,

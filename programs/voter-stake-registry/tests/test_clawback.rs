@@ -1,7 +1,6 @@
-use anchor_lang::Key;
 use anchor_spl::token::TokenAccount;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError};
+use solana_sdk::{signer::Signer, transport::TransportError};
 
 use program_test::*;
 

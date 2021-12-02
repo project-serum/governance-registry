@@ -1,4 +1,3 @@
-use anchor_lang::prelude::SolanaSysvar;
 use anchor_spl::token::TokenAccount;
 use program_test::*;
 use solana_program_test::*;
