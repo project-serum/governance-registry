@@ -1,7 +1,4 @@
 use crate::error::*;
-use crate::state::exchange_entry::ExchangeRateEntry;
-use crate::state::registrar::Registrar;
-use anchor_lang::__private::bytemuck::Zeroable;
 use anchor_lang::prelude::*;
 use anchor_spl::vote_weight_record;
 use std::convert::TryFrom;

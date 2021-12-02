@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::state::lockup::*;
 use crate::state::registrar::Registrar;
 use anchor_lang::prelude::*;
 use std::str::FromStr;
