@@ -29,7 +29,10 @@ async fn test_basic() -> Result<(), TransportError> {
         .create_token_owner_record(voter_authority.pubkey(), &payer)
         .await;
 
-    let registrar = context.addin.create_registrar(&realm, &realm_authority, payer).await;
+    let registrar = context
+        .addin
+        .create_registrar(&realm, &realm_authority, payer)
+        .await;
     let mngo_rate = context
         .addin
         .create_exchange_rate(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
