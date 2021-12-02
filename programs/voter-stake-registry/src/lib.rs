@@ -208,10 +208,8 @@ pub mod voter_stake_registry {
         Ok(())
     }
 
-    /// Updates a deposit entry by depositing tokens into the registrar in
-    /// exchange for *frozen* voting tokens. These tokens are not used for
-    /// anything other than displaying the amount in wallets.
-    pub fn update_deposit(ctx: Context<UpdateDeposit>, id: u8, amount: u64) -> Result<()> {
+    /// Adds tokens to a deposit entry by depositing tokens into the registrar.
+    pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
         msg!("--------update_deposit--------");
         let registrar = &ctx.accounts.registrar;
         let voter = &mut ctx.accounts.voter.load_mut()?;

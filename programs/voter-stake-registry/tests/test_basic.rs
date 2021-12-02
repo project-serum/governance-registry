@@ -69,7 +69,7 @@ async fn test_basic() -> Result<(), TransportError> {
         .await?;
     context
         .addin
-        .update_deposit(
+        .deposit(
             &registrar,
             &voter,
             &mngo_rate,

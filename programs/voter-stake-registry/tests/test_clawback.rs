@@ -88,7 +88,7 @@ async fn test_clawback() -> Result<(), TransportError> {
         .await?;
     context
         .addin
-        .update_deposit(
+        .deposit(
             &registrar,
             &voter,
             &mngo_rate,

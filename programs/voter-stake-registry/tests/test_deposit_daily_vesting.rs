@@ -99,8 +99,8 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
             amount,
         )
     };
-    let update_deposit = |amount: u64| {
-        addin.update_deposit(
+    let deposit = |amount: u64| {
+        addin.deposit(
             &registrar,
             &voter,
             &mngo_rate,
@@ -129,7 +129,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    update_deposit(9000).await.unwrap();
+    deposit(9000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -157,7 +157,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
 
     // There are two vesting periods left, if we add 5000 to the deposit,
     // half of that should vest each day.
-    update_deposit(5000).await.unwrap();
+    deposit(5000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -174,7 +174,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     context.solana.advance_clock_by_slots(2).await;
 
     // There is just one period left, should be fully withdrawable after
-    update_deposit(1000).await.unwrap();
+    deposit(1000).await.unwrap();
 
     context.solana.advance_clock_by_slots(2).await;
 
@@ -205,7 +205,7 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.deposit, 0);
 
     // if we deposit now, we can immediately withdraw
-    update_deposit(1000).await.unwrap();
+    deposit(1000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);

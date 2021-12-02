@@ -104,8 +104,8 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             amount,
         )
     };
-    let update_deposit = |deposit_id: u8, amount: u64| {
-        addin.update_deposit(
+    let deposit = |deposit_id: u8, amount: u64| {
+        addin.deposit(
             &registrar,
             &voter,
             &mngo_rate,
@@ -133,7 +133,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    update_deposit(0, 10000).await.unwrap();
+    deposit(0, 10000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -142,7 +142,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
     assert_eq!(after_deposit.deposit, 10000);
 
     // add to the existing deposit 0
-    update_deposit(0, 5000).await.unwrap();
+    deposit(0, 5000).await.unwrap();
 
     let after_deposit2 = get_balances(0).await;
     assert_eq!(initial.token, after_deposit2.token + after_deposit2.vault);
@@ -163,7 +163,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    update_deposit(1, 7000).await.unwrap();
+    deposit(1, 7000).await.unwrap();
 
     withdraw(10000)
         .await
@@ -241,7 +241,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .await
         .unwrap();
     addin
-        .update_deposit(
+        .deposit(
             &registrar,
             &voter2,
             &mngo_rate,
@@ -279,18 +279,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    addin
-        .update_deposit(
-            &registrar,
-            &voter,
-            &mngo_rate,
-            &voter_authority,
-            reference_account,
-            0,
-            3000,
-        )
-        .await
-        .unwrap();
+    deposit(0, 3000).await.unwrap();
 
     let after_reuse = get_balances(0).await;
     assert_eq!(initial.token, after_reuse.token + 7000 + 3000);

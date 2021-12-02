@@ -114,7 +114,7 @@ pub struct CreateDepositEntry<'info> {
 }
 
 #[derive(Accounts)]
-pub struct UpdateDeposit<'info> {
+pub struct Deposit<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
     #[account(mut, has_one = registrar)]
@@ -142,7 +142,7 @@ pub struct UpdateDeposit<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-impl<'info> UpdateDeposit<'info> {
+impl<'info> Deposit<'info> {
     pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
         let program = self.token_program.to_account_info();
         let accounts = token::Transfer {

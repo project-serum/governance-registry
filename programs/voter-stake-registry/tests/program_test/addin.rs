@@ -266,7 +266,7 @@ impl AddinCookie {
             .await
     }
 
-    pub async fn update_deposit(
+    pub async fn deposit(
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
@@ -277,13 +277,13 @@ impl AddinCookie {
         amount: u64,
     ) -> std::result::Result<(), TransportError> {
         let data =
-            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::UpdateDeposit {
+            anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Deposit {
                 id,
                 amount,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::UpdateDeposit {
+            &voter_stake_registry::accounts::Deposit {
                 registrar: registrar.address,
                 voter: voter.address,
                 exchange_vault: exchange_rate.exchange_vault,

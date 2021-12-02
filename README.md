@@ -54,7 +54,7 @@ realm authority to:
    This creates a new deposit entry that can be used for depositing and
    withdrawing funds without lockup. If it's the voter's first deposit entry,
    it will have deposit id 0.
-3. Call `UpdateDeposit` for the voter and deposit id to deposit funds.
+3. Call `Deposit` for the voter and deposit id to deposit funds.
 4. To vote, call `UpdateVoterWeightRecord` on the addin and then vote with that
    on spl-governance in the same transaction.
 5. Withdraw funds with `Withdraw` once proposals have resolved.
@@ -64,7 +64,7 @@ realm authority to:
 1. Ask the recepient to `CreateVoter` and `CreateDeposit` with the desired lock
    up period, vesting and `allow_clawback=true`. Double check the address and
    deposit id they communicate.
-2. Make a proposal to call `UpdateDeposit` for depositing tokens into their locked
+2. Make a proposal to call `Deposit` for depositing tokens into their locked
    deposit entry.
 3. If necessary, later make a proposal to call `Clawback` on their deposit to
    retrieve all remaining locked tokens.

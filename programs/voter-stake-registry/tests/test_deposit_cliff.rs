@@ -99,8 +99,8 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             amount,
         )
     };
-    let update_deposit = |amount: u64| {
-        addin.update_deposit(
+    let deposit = |amount: u64| {
+        addin.deposit(
             &registrar,
             &voter,
             &mngo_rate,
@@ -129,7 +129,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    update_deposit(9000).await.unwrap();
+    deposit(9000).await.unwrap();
 
     let after_deposit = get_balances(0).await;
     assert_eq!(initial.token, after_deposit.token + after_deposit.vault);
@@ -149,7 +149,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
     withdraw(1).await.expect_err("nothing vested yet");
 
     // deposit some more
-    update_deposit(1000).await.unwrap();
+    deposit(1000).await.unwrap();
 
     // advance more than three days
     addin
