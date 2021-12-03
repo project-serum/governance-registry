@@ -77,12 +77,12 @@ impl Lockup {
         if period_secs == 0 {
             return Ok(0);
         }
-        let d = u64::try_from({
+        let period = u64::try_from({
             let secs_elapsed = curr_ts.saturating_sub(self.start_ts);
             secs_elapsed.checked_div(period_secs).unwrap()
         })
         .map_err(|_| ErrorCode::UnableToConvert)?;
-        Ok(d)
+        Ok(period)
     }
 
     /// Returns the total amount of periods in the lockup period.
