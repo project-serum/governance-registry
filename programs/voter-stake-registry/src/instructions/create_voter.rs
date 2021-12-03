@@ -1,7 +1,5 @@
 use crate::error::*;
-use crate::state::lockup::*;
-use crate::state::registrar::Registrar;
-use crate::state::voter::Voter;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;

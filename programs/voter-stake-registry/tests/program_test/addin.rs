@@ -230,7 +230,7 @@ impl AddinCookie {
         voter_authority: &Keypair,
         exchange_rate: &ExchangeRateCookie,
         deposit_entry_index: u8,
-        lockup_kind: voter_stake_registry::state::lockup::LockupKind,
+        lockup_kind: voter_stake_registry::state::LockupKind,
         periods: i32,
         allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
@@ -406,8 +406,7 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-    ) -> std::result::Result<voter_stake_registry::state::lockup::VoterWeightRecord, TransportError>
-    {
+    ) -> std::result::Result<voter_stake_registry::state::VoterWeightRecord, TransportError> {
         let data = anchor_lang::InstructionData::data(
             &voter_stake_registry::instruction::UpdateVoterWeightRecord {},
         );
@@ -432,7 +431,7 @@ impl AddinCookie {
 
         Ok(self
             .solana
-            .get_account::<voter_stake_registry::state::lockup::VoterWeightRecord>(
+            .get_account::<voter_stake_registry::state::VoterWeightRecord>(
                 voter.voter_weight_record,
             )
             .await)
@@ -518,7 +517,7 @@ impl ExchangeRateCookie {
 impl VoterCookie {
     pub async fn deposit_amount(&self, solana: &SolanaCookie, deposit_id: u8) -> u64 {
         solana
-            .get_account::<voter_stake_registry::state::voter::Voter>(self.address)
+            .get_account::<voter_stake_registry::state::Voter>(self.address)
             .await
             .deposits[deposit_id as usize]
             .amount_deposited_native

@@ -123,7 +123,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             &voter_authority,
             &mngo_rate,
             0,
-            voter_stake_registry::state::lockup::LockupKind::Monthly,
+            voter_stake_registry::state::LockupKind::Monthly,
             3,
             false,
         )

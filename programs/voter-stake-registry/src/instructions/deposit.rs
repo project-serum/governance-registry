@@ -1,6 +1,5 @@
 use crate::error::*;
-use crate::state::registrar::Registrar;
-use crate::state::voter::Voter;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::convert::TryFrom;

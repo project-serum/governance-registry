@@ -1,7 +1,5 @@
 use crate::error::*;
-use crate::state::lockup::*;
-use crate::state::registrar::Registrar;
-use crate::state::voter::Voter;
+use crate::state::*;
 use anchor_lang::prelude::*;
 
 pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";

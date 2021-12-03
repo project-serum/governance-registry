@@ -1,5 +1,5 @@
 use crate::error::*;
-use crate::state::voter::Voter;
+use crate::state::*;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use error::*;
 use instructions::*;
-use state::lockup::*;
+use state::*;
 
 mod error;
 mod instructions;

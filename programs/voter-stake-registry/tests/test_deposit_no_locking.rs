@@ -3,7 +3,7 @@ use solana_program_test::*;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transport::TransportError};
 
 use program_test::*;
-use voter_stake_registry::state::lockup::LockupKind;
+use voter_stake_registry::state::LockupKind;
 
 mod program_test;
 

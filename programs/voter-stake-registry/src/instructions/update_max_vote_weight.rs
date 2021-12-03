@@ -1,6 +1,5 @@
 use crate::error::*;
-use crate::state::deposit_entry::{FIXED_VOTE_WEIGHT_FACTOR, LOCKING_VOTE_WEIGHT_FACTOR};
-use crate::state::registrar::Registrar;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
