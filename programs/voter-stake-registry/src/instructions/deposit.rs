@@ -51,9 +51,9 @@ impl<'info> Deposit<'info> {
 ///
 /// The deposit entry must have been initialized with create_deposit_entry.
 ///
-/// `id`: Index of the deposit entry.
+/// `deposit_entry_index`: Index of the deposit entry.
 /// `amount`: Number of native tokens to transfer.
-pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
+pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------update_deposit--------");
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
@@ -68,9 +68,12 @@ pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
         .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
     let _er_entry = registrar.rates[er_idx];
 
-    require!(voter.deposits.len() > id as usize, InvalidDepositId);
-    let d_entry = &mut voter.deposits[id as usize];
-    require!(d_entry.is_used, InvalidDepositId);
+    require!(
+        voter.deposits.len() > deposit_entry_index as usize,
+        InvalidDepositEntryIndex
+    );
+    let d_entry = &mut voter.deposits[deposit_entry_index as usize];
+    require!(d_entry.is_used, InvalidDepositEntryIndex);
 
     // Deposit tokens into the registrar.
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;

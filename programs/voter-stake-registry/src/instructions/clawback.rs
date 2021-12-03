@@ -11,7 +11,10 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_id: u8) -> Result<()> 
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
+    require!(
+        voter.deposits.len() > deposit_id.into(),
+        InvalidDepositEntryIndex
+    );
     require!(
         ctx.accounts.authority.key() == registrar.clawback_authority,
         InvalidAuthority
@@ -20,7 +23,7 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_id: u8) -> Result<()> 
     // Get the deposit being withdrawn from.
     let curr_ts = registrar.clock_unix_timestamp();
     let deposit_entry = &mut voter.deposits[deposit_id as usize];
-    require!(deposit_entry.is_used, InvalidDepositId);
+    require!(deposit_entry.is_used, InvalidDepositEntryIndex);
     require!(
         deposit_entry.allow_clawback,
         ErrorCode::ClawbackNotAllowedOnDeposit

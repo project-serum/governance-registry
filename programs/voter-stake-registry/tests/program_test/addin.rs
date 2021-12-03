@@ -270,12 +270,12 @@ impl AddinCookie {
         exchange_rate: &ExchangeRateCookie,
         authority: &Keypair,
         token_address: Pubkey,
-        id: u8,
+        deposit_entry_index: u8,
         amount: u64,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Deposit {
-                id,
+                deposit_entry_index,
                 amount,
             });
 
@@ -317,11 +317,11 @@ impl AddinCookie {
         exchange_rate: &ExchangeRateCookie,
         clawback_authority: &Keypair,
         token_address: Pubkey,
-        deposit_id: u8,
+        deposit_entry_index: u8,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Clawback {
-                deposit_id,
+                deposit_entry_index,
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
@@ -360,12 +360,12 @@ impl AddinCookie {
         exchange_rate: &ExchangeRateCookie,
         authority: &Keypair,
         token_address: Pubkey,
-        deposit_id: u8,
+        deposit_entry_index: u8,
         amount: u64,
     ) -> std::result::Result<(), TransportError> {
         let data =
             anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Withdraw {
-                deposit_id,
+                deposit_entry_index,
                 amount,
             });
 
@@ -439,10 +439,12 @@ impl AddinCookie {
         &self,
         voter: &VoterCookie,
         authority: &Keypair,
-        deposit_id: u8,
+        deposit_entry_index: u8,
     ) -> Result<(), TransportError> {
         let data = anchor_lang::InstructionData::data(
-            &voter_stake_registry::instruction::CloseDepositEntry { deposit_id },
+            &voter_stake_registry::instruction::CloseDepositEntry {
+                deposit_entry_index,
+            },
         );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(

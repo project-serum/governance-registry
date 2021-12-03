@@ -15,7 +15,7 @@ pub enum ErrorCode {
     #[msg("")]
     VotingTokenNonZero,
     #[msg("")]
-    InvalidDepositId, // 306
+    InvalidDepositEntryIndex, // 306
     #[msg("")]
     InsufficientVestedTokens, // 307
     #[msg("")]

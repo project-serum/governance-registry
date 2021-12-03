@@ -10,13 +10,16 @@ pub struct CloseDepositEntry<'info> {
 }
 
 /// Close an empty deposit, allowing it to be reused in the future
-pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_id: u8) -> Result<()> {
+pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_entry_index: u8) -> Result<()> {
     msg!("--------close_deposit--------");
     let voter = &mut ctx.accounts.voter.load_mut()?;
 
-    require!(voter.deposits.len() > deposit_id as usize, InvalidDepositId);
-    let d = &mut voter.deposits[deposit_id as usize];
-    require!(d.is_used, InvalidDepositId);
+    require!(
+        voter.deposits.len() > deposit_entry_index as usize,
+        InvalidDepositEntryIndex
+    );
+    let d = &mut voter.deposits[deposit_entry_index as usize];
+    require!(d.is_used, InvalidDepositEntryIndex);
     require!(d.amount_deposited_native == 0, VotingTokenNonZero);
 
     // Deposits that have clawback enabled are guaranteed to live until the end

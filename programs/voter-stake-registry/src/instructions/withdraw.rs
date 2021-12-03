@@ -55,12 +55,19 @@ impl<'info> WithdrawOrClawback<'info> {
 /// to a vesting schedule.
 ///
 /// `amount` is in units of the native currency being withdrawn.
-pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -> Result<()> {
+pub fn withdraw(
+    ctx: Context<WithdrawOrClawback>,
+    deposit_entry_index: u8,
+    amount: u64,
+) -> Result<()> {
     msg!("--------withdraw--------");
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    require!(voter.deposits.len() > deposit_id.into(), InvalidDepositId);
+    require!(
+        voter.deposits.len() > deposit_entry_index.into(),
+        InvalidDepositEntryIndex
+    );
     require!(
         ctx.accounts.authority.key() == voter.voter_authority,
         InvalidAuthority
@@ -91,8 +98,8 @@ pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -
 
     // Get the deposit being withdrawn from.
     let curr_ts = registrar.clock_unix_timestamp();
-    let deposit_entry = &mut voter.deposits[deposit_id as usize];
-    require!(deposit_entry.is_used, InvalidDepositId);
+    let deposit_entry = &mut voter.deposits[deposit_entry_index as usize];
+    require!(deposit_entry.is_used, InvalidDepositEntryIndex);
     require!(
         deposit_entry.amount_withdrawable(curr_ts) >= amount,
         InsufficientVestedTokens

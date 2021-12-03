@@ -92,24 +92,35 @@ pub mod voter_stake_registry {
         instructions::create_deposit_entry(ctx, kind, periods, allow_clawback)
     }
 
-    pub fn deposit(ctx: Context<Deposit>, id: u8, amount: u64) -> Result<()> {
-        instructions::deposit(ctx, id, amount)
+    pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {
+        instructions::deposit(ctx, deposit_entry_index, amount)
     }
 
-    pub fn withdraw(ctx: Context<WithdrawOrClawback>, deposit_id: u8, amount: u64) -> Result<()> {
-        instructions::withdraw(ctx, deposit_id, amount)
+    pub fn withdraw(
+        ctx: Context<WithdrawOrClawback>,
+        deposit_entry_index: u8,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::withdraw(ctx, deposit_entry_index, amount)
     }
 
-    pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_id: u8) -> Result<()> {
-        instructions::clawback(ctx, deposit_id)
+    pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Result<()> {
+        instructions::clawback(ctx, deposit_entry_index)
     }
 
-    pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_id: u8) -> Result<()> {
-        instructions::close_deposit_entry(ctx, deposit_id)
+    pub fn close_deposit_entry(
+        ctx: Context<CloseDepositEntry>,
+        deposit_entry_index: u8,
+    ) -> Result<()> {
+        instructions::close_deposit_entry(ctx, deposit_entry_index)
     }
 
-    pub fn reset_lockup(ctx: Context<ResetLockup>, deposit_id: u8, periods: i64) -> Result<()> {
-        instructions::reset_lockup(ctx, deposit_id, periods)
+    pub fn reset_lockup(
+        ctx: Context<ResetLockup>,
+        deposit_entry_index: u8,
+        periods: i64,
+    ) -> Result<()> {
+        instructions::reset_lockup(ctx, deposit_entry_index, periods)
     }
 
     pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
