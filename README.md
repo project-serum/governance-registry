@@ -39,7 +39,7 @@ To start using the addin, make a governance proposal with the spl-governance
 realm authority to:
 1. Deploy an instance of the voter-stake-registry.
 2. Create a registrar for the realm with the `CreateRegistrar` instruction.
-3. Add voting token mints to the registrar by calling the `CreateExchangeRate`
+3. Add voting token mints to the registrar by calling the `ConfigureVotingMint`
    instruction as often as desired.
 4. Call the `SetRealmConfig` instruction on spl-governance to set the
    voter-weight-addin program id and thereby enable the addin.

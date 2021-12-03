@@ -33,9 +33,9 @@ async fn test_basic() -> Result<(), TransportError> {
         .addin
         .create_registrar(&realm, &realm_authority, payer)
         .await;
-    let mngo_rate = context
+    let mngo_voting_mint = context
         .addin
-        .create_exchange_rate(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
+        .configure_voting_mint(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
         .await;
 
     let voter = context
@@ -50,7 +50,7 @@ async fn test_basic() -> Result<(), TransportError> {
         .solana
         .token_account_balance(reference_account)
         .await;
-    let vault_initial = mngo_rate.vault_balance(&context.solana).await;
+    let vault_initial = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_initial, 0);
     let balance_initial = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(balance_initial, 0);
@@ -61,7 +61,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &registrar,
             &voter,
             voter_authority,
-            &mngo_rate,
+            &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Cliff,
             0,
@@ -73,7 +73,7 @@ async fn test_basic() -> Result<(), TransportError> {
         .deposit(
             &registrar,
             &voter,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,
@@ -86,7 +86,7 @@ async fn test_basic() -> Result<(), TransportError> {
         .token_account_balance(reference_account)
         .await;
     assert_eq!(reference_initial, reference_after_deposit + 10000);
-    let vault_after_deposit = mngo_rate.vault_balance(&context.solana).await;
+    let vault_after_deposit = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_after_deposit, 10000);
     let balance_after_deposit = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(balance_after_deposit, 10000);
@@ -97,7 +97,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,
@@ -115,7 +115,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,
@@ -128,7 +128,7 @@ async fn test_basic() -> Result<(), TransportError> {
         .token_account_balance(reference_account)
         .await;
     assert_eq!(reference_initial, reference_after_withdraw);
-    let vault_after_withdraw = mngo_rate.vault_balance(&context.solana).await;
+    let vault_after_withdraw = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_after_withdraw, 0);
     let balance_after_withdraw = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(balance_after_withdraw, 0);

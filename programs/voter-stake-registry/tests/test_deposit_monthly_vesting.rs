@@ -17,7 +17,7 @@ async fn balances(
     registrar: &RegistrarCookie,
     address: Pubkey,
     voter: &VoterCookie,
-    rate: &ExchangeRateCookie,
+    rate: &VotingMintConfigCookie,
     deposit_id: u8,
 ) -> Balances {
     // Advance slots to avoid caching of the UpdateVoterWeightRecord call
@@ -67,8 +67,8 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
     let registrar = addin
         .create_registrar(&realm, &realm_authority, payer)
         .await;
-    let mngo_rate = addin
-        .create_exchange_rate(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
+    let mngo_voting_mint = addin
+        .configure_voting_mint(&registrar, &realm_authority, payer, 0, &context.mints[0], 1)
         .await;
 
     let voter = addin
@@ -82,7 +82,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             &registrar,
             reference_account,
             &voter,
-            &mngo_rate,
+            &mngo_voting_mint,
             depot_id,
         )
     };
@@ -91,7 +91,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,
@@ -102,7 +102,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
         addin.deposit(
             &registrar,
             &voter,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,
@@ -121,7 +121,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &voter_authority,
-            &mngo_rate,
+            &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Monthly,
             3,

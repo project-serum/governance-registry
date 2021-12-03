@@ -57,8 +57,11 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
     let d_entry = voter.active_deposit_mut(deposit_entry_index)?;
 
     // Get the exchange rate entry associated with this deposit.
-    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.deposit_token.mint)?;
-    require!(er_idx == d_entry.rate_idx as usize, InvalidMint);
+    let mint_idx = registrar.voting_mint_config_index(ctx.accounts.deposit_token.mint)?;
+    require!(
+        mint_idx == d_entry.voting_mint_config_idx as usize,
+        InvalidMint
+    );
 
     // Deposit tokens into the registrar.
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;

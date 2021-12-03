@@ -102,9 +102,9 @@ pub fn withdraw(
     );
 
     // Get the exchange rate for the token being withdrawn.
-    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.destination.mint)?;
+    let mint_idx = registrar.voting_mint_config_index(ctx.accounts.destination.mint)?;
     require!(
-        er_idx == deposit_entry.rate_idx as usize,
+        mint_idx == deposit_entry.voting_mint_config_idx as usize,
         ErrorCode::InvalidMint
     );
 

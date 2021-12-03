@@ -6,7 +6,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 #[derive(Accounts)]
 #[instruction(idx: u16, rate: u64, decimals: u8)]
-pub struct CreateExchangeRate<'info> {
+pub struct ConfigureVotingMint<'info> {
     #[account(mut, has_one = realm_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
     pub realm_authority: Signer<'info>,
@@ -43,23 +43,24 @@ pub struct CreateExchangeRate<'info> {
 /// ```
 /// rate * 10^vote_weight_decimals / 10^decimals
 /// ```
-pub fn create_exchange_rate(
-    ctx: Context<CreateExchangeRate>,
+pub fn configure_voting_mint(
+    ctx: Context<ConfigureVotingMint>,
     idx: u16,
     rate: u64,
     decimals: u8,
 ) -> Result<()> {
-    msg!("--------create_exchange_rate--------");
+    msg!("--------configure_voting_mint--------");
     require!(rate > 0, InvalidRate);
     let registrar = &mut ctx.accounts.registrar;
     require!(
-        (idx as usize) < registrar.rates.len(),
-        OutOfBoundsRatesIndex
+        (idx as usize) < registrar.voting_mints.len(),
+        OutOfBoundsVotingMintConfigIndex
     );
     require!(
-        registrar.rates[idx as usize].rate == 0,
-        RatesIndexAlreadyInUse
+        registrar.voting_mints[idx as usize].rate == 0,
+        VotingMintConfigIndexAlreadyInUse
     );
-    registrar.rates[idx as usize] = registrar.new_rate(ctx.accounts.mint.key(), decimals, rate)?;
+    registrar.voting_mints[idx as usize] =
+        registrar.new_rate(ctx.accounts.mint.key(), decimals, rate)?;
     Ok(())
 }

@@ -37,7 +37,7 @@ pub fn create_deposit_entry(
     let voter = &mut ctx.accounts.voter.load_mut()?;
 
     // Get the exchange rate entry associated with this deposit.
-    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.deposit_mint.key())?;
+    let mint_idx = registrar.voting_mint_config_index(ctx.accounts.deposit_mint.key())?;
 
     // Get and set up the deposit entry.
     require!(
@@ -49,7 +49,7 @@ pub fn create_deposit_entry(
 
     *d_entry = DepositEntry::default();
     d_entry.is_used = true;
-    d_entry.rate_idx = er_idx as u8;
+    d_entry.voting_mint_config_idx = mint_idx as u8;
     d_entry.amount_deposited_native = 0;
     d_entry.amount_initially_locked_native = 0;
     d_entry.allow_clawback = allow_clawback;

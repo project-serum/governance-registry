@@ -49,7 +49,7 @@ pub struct CreateRegistrar<'info> {
 /// `vote_weight_decimals` is the number of decimals used on the vote weight. It must be
 /// larger or equal to all token mints used for voting.
 ///
-/// To use the registrar, call CreateExchangeRate to register token mints that may be
+/// To use the registrar, call ConfigVotingMint to register token mints that may be
 /// used for voting.
 pub fn create_registrar(
     ctx: Context<CreateRegistrar>,

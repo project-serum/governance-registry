@@ -1,5 +1,5 @@
 use crate::error::*;
-use crate::state::exchange_entry::ExchangeRateEntry;
+use crate::state::voting_mint_config::VotingMintConfig;
 use anchor_lang::prelude::*;
 
 /// Instance of a voting rights distributor.
@@ -13,7 +13,7 @@ pub struct Registrar {
     pub clawback_authority: Pubkey,
     pub bump: u8,
     // The length should be adjusted for one's use case.
-    pub rates: [ExchangeRateEntry; 2],
+    pub voting_mints: [VotingMintConfig; 2],
 
     /// The decimals to use when converting deposits into a common currency.
     ///
@@ -26,18 +26,13 @@ pub struct Registrar {
 }
 
 impl Registrar {
-    pub fn new_rate(
-        &self,
-        mint: Pubkey,
-        mint_decimals: u8,
-        rate: u64,
-    ) -> Result<ExchangeRateEntry> {
+    pub fn new_rate(&self, mint: Pubkey, mint_decimals: u8, rate: u64) -> Result<VotingMintConfig> {
         require!(self.vote_weight_decimals >= mint_decimals, InvalidDecimals);
         let decimal_diff = self
             .vote_weight_decimals
             .checked_sub(mint_decimals)
             .unwrap();
-        Ok(ExchangeRateEntry {
+        Ok(VotingMintConfig {
             mint,
             rate,
             mint_decimals,
@@ -49,11 +44,11 @@ impl Registrar {
         Clock::get().unwrap().unix_timestamp + self.time_offset
     }
 
-    pub fn exchange_rate_index_for_mint(&self, mint: Pubkey) -> Result<usize> {
-        self.rates
+    pub fn voting_mint_config_index(&self, mint: Pubkey) -> Result<usize> {
+        self.voting_mints
             .iter()
             .position(|r| r.mint == mint)
-            .ok_or(Error::ErrorCode(ErrorCode::ExchangeRateEntryNotFound))
+            .ok_or(Error::ErrorCode(ErrorCode::VotingMintNotFound))
     }
 }
 

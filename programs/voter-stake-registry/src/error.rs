@@ -7,7 +7,7 @@ pub enum ErrorCode {
     #[msg("")]
     RatesFull,
     #[msg("")]
-    ExchangeRateEntryNotFound, // 302
+    VotingMintNotFound, // 302
     #[msg("")]
     DepositEntryNotFound,
     #[msg("")]
@@ -29,9 +29,9 @@ pub enum ErrorCode {
     #[msg("")]
     InvalidDays,
     #[msg("")]
-    RatesIndexAlreadyInUse,
+    VotingMintConfigIndexAlreadyInUse,
     #[msg("")]
-    OutOfBoundsRatesIndex,
+    OutOfBoundsVotingMintConfigIndex,
     #[msg("Exchange rate decimals cannot be larger than registrar decimals")]
     InvalidDecimals,
     #[msg("")]

@@ -22,7 +22,7 @@ pub struct RegistrarCookie {
 }
 
 #[derive(Clone, Copy)]
-pub struct ExchangeRateCookie {
+pub struct VotingMintConfigCookie {
     pub mint: MintCookie,
     pub vault: Pubkey,
 }
@@ -96,7 +96,7 @@ impl AddinCookie {
         }
     }
 
-    pub async fn create_exchange_rate(
+    pub async fn configure_voting_mint(
         &self,
         registrar: &RegistrarCookie,
         authority: &Keypair,
@@ -104,7 +104,7 @@ impl AddinCookie {
         index: u16,
         mint: &MintCookie,
         rate: u64,
-    ) -> ExchangeRateCookie {
+    ) -> VotingMintConfigCookie {
         let deposit_mint = mint.pubkey.unwrap();
         let vault = spl_associated_token_account::get_associated_token_address(
             &registrar.address,
@@ -112,7 +112,7 @@ impl AddinCookie {
         );
 
         let data = anchor_lang::InstructionData::data(
-            &voter_stake_registry::instruction::CreateExchangeRate {
+            &voter_stake_registry::instruction::ConfigureVotingMint {
                 idx: index,
                 rate,
                 decimals: mint.decimals,
@@ -120,7 +120,7 @@ impl AddinCookie {
         );
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::CreateExchangeRate {
+            &voter_stake_registry::accounts::ConfigureVotingMint {
                 vault,
                 mint: deposit_mint,
                 registrar: registrar.address,
@@ -149,7 +149,7 @@ impl AddinCookie {
             .await
             .unwrap();
 
-        ExchangeRateCookie {
+        VotingMintConfigCookie {
             mint: mint.clone(),
             vault,
         }
@@ -227,7 +227,7 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         voter_authority: &Keypair,
-        exchange_rate: &ExchangeRateCookie,
+        voting_mint: &VotingMintConfigCookie,
         deposit_entry_index: u8,
         lockup_kind: voter_stake_registry::state::LockupKind,
         periods: u32,
@@ -247,7 +247,7 @@ impl AddinCookie {
                 registrar: registrar.address,
                 voter: voter.address,
                 voter_authority: voter_authority.pubkey(),
-                deposit_mint: exchange_rate.mint.pubkey.unwrap(),
+                deposit_mint: voting_mint.mint.pubkey.unwrap(),
             },
             None,
         );
@@ -270,7 +270,7 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-        exchange_rate: &ExchangeRateCookie,
+        voting_mint: &VotingMintConfigCookie,
         authority: &Keypair,
         token_address: Pubkey,
         deposit_entry_index: u8,
@@ -286,7 +286,7 @@ impl AddinCookie {
             &voter_stake_registry::accounts::Deposit {
                 registrar: registrar.address,
                 voter: voter.address,
-                vault: exchange_rate.vault,
+                vault: voting_mint.vault,
                 deposit_token: token_address,
                 deposit_authority: authority.pubkey(),
                 token_program: spl_token::id(),
@@ -314,7 +314,7 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         token_owner_record: &TokenOwnerRecordCookie,
-        exchange_rate: &ExchangeRateCookie,
+        voting_mint: &VotingMintConfigCookie,
         clawback_authority: &Keypair,
         token_address: Pubkey,
         deposit_entry_index: u8,
@@ -329,7 +329,7 @@ impl AddinCookie {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
-                vault: exchange_rate.vault,
+                vault: voting_mint.vault,
                 destination: token_address,
                 authority: clawback_authority.pubkey(),
                 token_program: spl_token::id(),
@@ -356,7 +356,7 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         token_owner_record: &TokenOwnerRecordCookie,
-        exchange_rate: &ExchangeRateCookie,
+        voting_mint: &VotingMintConfigCookie,
         authority: &Keypair,
         token_address: Pubkey,
         deposit_entry_index: u8,
@@ -373,7 +373,7 @@ impl AddinCookie {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
-                vault: exchange_rate.vault,
+                vault: voting_mint.vault,
                 destination: token_address,
                 authority: authority.pubkey(),
                 token_program: spl_token::id(),
@@ -540,7 +540,7 @@ impl AddinCookie {
     }
 }
 
-impl ExchangeRateCookie {
+impl VotingMintConfigCookie {
     pub async fn vault_balance(&self, solana: &SolanaCookie) -> u64 {
         solana.get_account::<TokenAccount>(self.vault).await.amount
     }

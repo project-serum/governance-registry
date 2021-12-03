@@ -66,13 +66,13 @@ pub mod voter_stake_registry {
         instructions::create_registrar(ctx, vote_weight_decimals, registrar_bump)
     }
 
-    pub fn create_exchange_rate(
-        ctx: Context<CreateExchangeRate>,
+    pub fn configure_voting_mint(
+        ctx: Context<ConfigureVotingMint>,
         idx: u16,
         rate: u64,
         decimals: u8,
     ) -> Result<()> {
-        instructions::create_exchange_rate(ctx, idx, rate, decimals)
+        instructions::configure_voting_mint(ctx, idx, rate, decimals)
     }
 
     pub fn create_voter(

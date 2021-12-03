@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 /// Exchange rate for an asset that can be used to mint voting rights.
 #[zero_copy]
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
-pub struct ExchangeRateEntry {
+pub struct VotingMintConfig {
     /// Mint for this entry.
     pub mint: Pubkey,
 
@@ -28,12 +28,12 @@ pub struct ExchangeRateEntry {
     pub conversion_factor: u64,
 }
 
-impl ExchangeRateEntry {
-    /// Converts an amount in this ExchangeRateEntry's mint's native currency
+impl VotingMintConfig {
+    /// Converts an amount in this voting mints's native currency
     /// to the equivalent common registrar vote currency amount.
     pub fn convert(&self, amount_native: u64) -> u64 {
         amount_native.checked_mul(self.conversion_factor).unwrap()
     }
 }
 
-unsafe impl Zeroable for ExchangeRateEntry {}
+unsafe impl Zeroable for VotingMintConfig {}

@@ -40,10 +40,10 @@ async fn test_clawback() -> Result<(), TransportError> {
         .create_registrar(&realm, realm_authority, realm_authority)
         .await;
 
-    println!("create_exchange_rate");
-    let mngo_rate = context
+    println!("configure_voting_mint");
+    let mngo_voting_mint = context
         .addin
-        .create_exchange_rate(
+        .configure_voting_mint(
             &registrar,
             &realm_authority,
             realm_authority,
@@ -72,7 +72,7 @@ async fn test_clawback() -> Result<(), TransportError> {
         .solana
         .token_account_balance(voter_authority_ata)
         .await;
-    let vault_initial = mngo_rate.vault_balance(&context.solana).await;
+    let vault_initial = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_initial, 0);
     let voter_balance_initial = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(voter_balance_initial, 0);
@@ -84,7 +84,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &registrar,
             &voter,
             voter_authority,
-            &mngo_rate,
+            &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Daily,
             10,
@@ -96,7 +96,7 @@ async fn test_clawback() -> Result<(), TransportError> {
         .deposit(
             &registrar,
             &voter,
-            &mngo_rate,
+            &mngo_voting_mint,
             &realm_authority,
             realm_authority_ata,
             0,
@@ -109,7 +109,7 @@ async fn test_clawback() -> Result<(), TransportError> {
         .token_account_balance(realm_authority_ata)
         .await;
     assert_eq!(realm_ata_initial, realm_ata_after_deposit + 10000);
-    let vault_after_deposit = mngo_rate.vault_balance(&context.solana).await;
+    let vault_after_deposit = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_after_deposit, 10000);
     let voter_balance_after_deposit = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(voter_balance_after_deposit, 10000);
@@ -121,7 +121,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,
             0,
@@ -145,7 +145,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,
             0,
@@ -160,7 +160,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &realm_authority,
             realm_authority_ata,
             0,
@@ -174,7 +174,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &registrar,
             &voter,
             &token_owner_record,
-            &mngo_rate,
+            &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,
             0,
@@ -192,7 +192,7 @@ async fn test_clawback() -> Result<(), TransportError> {
         .token_account_balance(voter_authority_ata)
         .await;
     assert_eq!(voter_after_withdraw, voter_ata_initial + 2000);
-    let vault_after_withdraw = mngo_rate.vault_balance(&context.solana).await;
+    let vault_after_withdraw = mngo_voting_mint.vault_balance(&context.solana).await;
     assert_eq!(vault_after_withdraw, 0);
     let voter_balance_after_withdraw = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(voter_balance_after_withdraw, 0);

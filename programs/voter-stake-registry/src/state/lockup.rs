@@ -626,7 +626,7 @@ mod tests {
         let end_ts = start_ts + days_to_secs(t.days_total);
         let d = DepositEntry {
             is_used: true,
-            rate_idx: 0,
+            voting_mint_config_idx: 0,
             amount_deposited_native: t.amount_deposited,
             amount_initially_locked_native: t.amount_deposited,
             allow_clawback: false,

@@ -1,6 +1,6 @@
 use crate::error::*;
-use crate::state::exchange_entry::ExchangeRateEntry;
 use crate::state::lockup::{Lockup, LockupKind};
+use crate::state::voting_mint_config::VotingMintConfig;
 use anchor_lang::prelude::*;
 
 /// Vote weight is amount * FIXED_VOTE_WEIGHT_FACTOR +
@@ -15,8 +15,8 @@ pub struct DepositEntry {
     // True if the deposit entry is being used.
     pub is_used: bool,
 
-    // Points to the ExchangeRate this deposit uses.
-    pub rate_idx: u8,
+    // Points to the VotingMintConfig this deposit uses.
+    pub voting_mint_config_idx: u8,
 
     /// Amount in deposited, in native currency. Withdraws of vested tokens
     /// directly reduce this amount.
@@ -137,8 +137,8 @@ impl DepositEntry {
     /// a time factor of 1/2555.
     ///
     /// The computation below uses 1 + 2 + ... + n = n * (n + 1) / 2.
-    pub fn voting_power(&self, rate: &ExchangeRateEntry, curr_ts: i64) -> Result<u64> {
-        let fixed_contribution = rate
+    pub fn voting_power(&self, voting_mint_config: &VotingMintConfig, curr_ts: i64) -> Result<u64> {
+        let fixed_contribution = voting_mint_config
             .convert(self.amount_deposited_native)
             .checked_mul(FIXED_VOTE_WEIGHT_FACTOR)
             .unwrap();
@@ -146,7 +146,8 @@ impl DepositEntry {
             return Ok(fixed_contribution);
         }
 
-        let max_locked_contribution = rate.convert(self.amount_initially_locked_native);
+        let max_locked_contribution =
+            voting_mint_config.convert(self.amount_initially_locked_native);
         Ok(fixed_contribution
             + self
                 .voting_power_locked(curr_ts, max_locked_contribution)?

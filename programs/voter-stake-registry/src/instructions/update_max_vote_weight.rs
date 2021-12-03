@@ -30,9 +30,9 @@ pub fn update_max_vote_weight<'info>(ctx: Context<UpdateMaxVoteWeight>) -> Resul
             .collect::<std::result::Result<Vec<Account<Mint>>, ProgramError>>()?
             .iter()
             .try_fold(0u64, |sum, m| {
-                let er_idx = registrar.exchange_rate_index_for_mint(m.key())?;
-                let er_entry = registrar.rates[er_idx];
-                let amount = er_entry.convert(m.supply);
+                let mint_idx = registrar.voting_mint_config_index(m.key())?;
+                let mint_config = registrar.voting_mints[mint_idx];
+                let amount = mint_config.convert(m.supply);
                 let total = sum.checked_add(amount).unwrap();
                 Ok(total)
             });

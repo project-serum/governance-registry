@@ -27,8 +27,11 @@ impl Voter {
             .iter()
             .filter(|d| d.is_used)
             .try_fold(0, |sum, d| {
-                d.voting_power(&registrar.rates[d.rate_idx as usize], curr_ts)
-                    .map(|vp| sum + vp)
+                d.voting_power(
+                    &registrar.voting_mints[d.voting_mint_config_idx as usize],
+                    curr_ts,
+                )
+                .map(|vp| sum + vp)
             })
     }
 
