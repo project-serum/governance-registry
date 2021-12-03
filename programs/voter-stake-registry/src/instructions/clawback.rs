@@ -29,12 +29,11 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
     );
 
     let curr_ts = registrar.clock_unix_timestamp();
-    let unvested_amount =
-        deposit_entry.amount_initially_locked_native - deposit_entry.vested(curr_ts).unwrap();
+    let locked_amount = deposit_entry.amount_locked(curr_ts);
 
     // sanity check only
     require!(
-        deposit_entry.amount_deposited_native >= unvested_amount,
+        deposit_entry.amount_deposited_native >= locked_amount,
         InsufficientVestedTokens
     );
 
@@ -42,11 +41,11 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
     let registrar_seeds = registrar_seeds!(registrar);
     token::transfer(
         ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
-        unvested_amount,
+        locked_amount,
     )?;
 
     // Update deposit book keeping.
-    deposit_entry.amount_deposited_native -= unvested_amount;
+    deposit_entry.amount_deposited_native -= locked_amount;
 
     // Now that all locked funds are withdrawn, end the lockup
     deposit_entry.amount_initially_locked_native = 0;

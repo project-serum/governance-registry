@@ -248,15 +248,20 @@ impl DepositEntry {
         Ok(vested)
     }
 
+    /// Returns native tokens still locked.
+    #[inline(always)]
+    pub fn amount_locked(&self, curr_ts: i64) -> u64 {
+        self.amount_initially_locked_native
+            .checked_sub(self.vested(curr_ts).unwrap())
+            .unwrap()
+    }
+
     /// Returns the amount that may be withdrawn given current vesting
     /// and previous withdraws.
+    #[inline(always)]
     pub fn amount_withdrawable(&self, curr_ts: i64) -> u64 {
-        let still_locked = self
-            .amount_initially_locked_native
-            .checked_sub(self.vested(curr_ts).unwrap())
-            .unwrap();
         self.amount_deposited_native
-            .checked_sub(still_locked)
+            .checked_sub(self.amount_locked(curr_ts))
             .unwrap()
     }
 }
