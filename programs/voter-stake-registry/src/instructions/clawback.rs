@@ -49,9 +49,8 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
 
     // Now that all locked funds are withdrawn, end the lockup
     deposit_entry.amount_initially_locked_native = 0;
-    deposit_entry.lockup.kind = LockupKind::None;
-    deposit_entry.lockup.start_ts = registrar.clock_unix_timestamp();
-    deposit_entry.lockup.end_ts = deposit_entry.lockup.start_ts;
+    deposit_entry.lockup =
+        Lockup::new_from_periods(LockupKind::None, registrar.clock_unix_timestamp(), 0)?;
     deposit_entry.allow_clawback = false;
 
     Ok(())

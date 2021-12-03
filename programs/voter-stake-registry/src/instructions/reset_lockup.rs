@@ -31,19 +31,10 @@ pub fn reset_lockup(
         InvalidDays
     );
     require!(periods > 0, InvalidDays);
-    require!(periods as u64 <= d.lockup.kind.max_periods(), InvalidDays);
 
     // Lock up every deposited token again
     d.amount_initially_locked_native = d.amount_deposited_native;
-
-    d.lockup.start_ts = curr_ts;
-    d.lockup.end_ts = curr_ts
-        .checked_add(
-            (periods as i64)
-                .checked_mul(d.lockup.kind.period_secs())
-                .unwrap(),
-        )
-        .unwrap();
+    d.lockup = Lockup::new_from_periods(d.lockup.kind, curr_ts, periods)?;
 
     Ok(())
 }

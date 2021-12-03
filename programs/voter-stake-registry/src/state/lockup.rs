@@ -51,6 +51,19 @@ impl Default for Lockup {
 }
 
 impl Lockup {
+    /// Create lockup for a given period
+    pub fn new_from_periods(kind: LockupKind, start_ts: i64, periods: u32) -> Result<Self> {
+        require!(periods as u64 <= kind.max_periods(), InvalidDays);
+        Ok(Self {
+            kind,
+            start_ts,
+            end_ts: start_ts
+                .checked_add(i64::from(periods).checked_mul(kind.period_secs()).unwrap())
+                .unwrap(),
+            padding: [0; 16],
+        })
+    }
+
     /// Returns the number of periods left on the lockup.
     pub fn periods_left(&self, curr_ts: i64) -> Result<u64> {
         Ok(self
