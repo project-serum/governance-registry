@@ -1,10 +1,33 @@
 use anchor_spl::token::TokenAccount;
-use futures::FutureExt;
 use program_test::*;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transport::TransportError};
+use std::cell::RefCell;
+use std::sync::Arc;
 
 mod program_test;
+
+async fn get_lockup_data(
+    solana: &SolanaCookie,
+    voter: Pubkey,
+    index: u8,
+    time_offset: i64,
+) -> (u64, u64, u64, u64, u64) {
+    let now = solana.get_clock().await.unix_timestamp + time_offset;
+    let voter = solana
+        .get_account::<voter_stake_registry::state::Voter>(voter)
+        .await;
+    let d = voter.deposits[index as usize];
+    (
+        // time since lockup
+        (now - d.lockup.start_ts) as u64,
+        // duration of lockup
+        (d.lockup.end_ts - d.lockup.start_ts) as u64,
+        d.amount_initially_locked_native,
+        d.amount_deposited_native,
+        d.amount_withdrawable(now),
+    )
+}
 
 #[allow(unaligned_references)]
 #[tokio::test]
@@ -68,19 +91,16 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
     let reset_lockup = |index: u8, periods: u32| {
         addin.reset_lockup(&registrar, &voter, &voter_authority, index, periods)
     };
-    let lockup_status = |index: u8| {
-        context
-            .solana
-            .get_account::<voter_stake_registry::state::Voter>(voter.address)
-            .map(move |v| {
-                let d = v.deposits[index as usize];
-                (
-                    d.lockup.end_ts - d.lockup.start_ts,
-                    d.amount_initially_locked_native,
-                    d.amount_deposited_native,
-                )
-            })
+    let time_offset = Arc::new(RefCell::new(0i64));
+    let advance_time = |extra: u64| {
+        *time_offset.borrow_mut() += extra as i64;
+        addin.set_time_offset(&registrar, &realm_authority, *time_offset.borrow())
     };
+    let lockup_status =
+        |index: u8| get_lockup_data(&context.solana, voter.address, index, *time_offset.borrow());
+
+    let day = 24 * 60 * 60;
+    let hour = 60 * 60;
 
     // tests for daily vesting
     addin
@@ -96,66 +116,66 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    deposit(7, 8000).await.unwrap();
-    assert_eq!(lockup_status(7).await, (3 * 24 * 60 * 60, 8000, 8000));
-    deposit(7, 1000).await.unwrap();
-    assert_eq!(lockup_status(7).await, (3 * 24 * 60 * 60, 9000, 9000));
+    deposit(7, 80).await.unwrap();
+    assert_eq!(lockup_status(7).await, (0, 3 * day, 80, 80, 0));
+    deposit(7, 10).await.unwrap();
+    assert_eq!(lockup_status(7).await, (0, 3 * day, 90, 90, 0));
     reset_lockup(7, 2)
         .await
         .expect_err("can't relock for less periods");
     reset_lockup(7, 3).await.unwrap(); // just resets start to current timestamp
-    assert_eq!(lockup_status(7).await, (3 * 24 * 60 * 60, 9000, 9000));
+    assert_eq!(lockup_status(7).await, (0, 3 * day, 90, 90, 0));
 
     // advance more than a day
-    addin
-        .set_time_offset(&registrar, &realm_authority, 25 * 60 * 60)
-        .await;
+    advance_time(day + hour).await;
     context.solana.advance_clock_by_slots(2).await;
 
-    assert_eq!(lockup_status(7).await, (3 * 24 * 60 * 60, 9000, 9000));
-    deposit(7, 1000).await.unwrap();
-    assert_eq!(lockup_status(7).await, (2 * 24 * 60 * 60, 7000, 10000)); // 3000 vested
+    assert_eq!(lockup_status(7).await, (day + hour, 3 * day, 90, 90, 30));
+    deposit(7, 10).await.unwrap();
+    assert_eq!(lockup_status(7).await, (hour, 2 * day, 70, 100, 30));
     reset_lockup(7, 10).await.unwrap();
-    assert_eq!(lockup_status(7).await, (10 * 24 * 60 * 60, 10000, 10000));
+    assert_eq!(lockup_status(7).await, (0, 10 * day, 100, 100, 0));
 
     // advance four more days
-    addin
-        .set_time_offset(&registrar, &realm_authority, 5 * 25 * 60 * 60)
-        .await;
+    advance_time(4 * day + hour).await;
     context.solana.advance_clock_by_slots(2).await;
 
-    assert_eq!(lockup_status(7).await, (10 * 24 * 60 * 60, 10000, 10000));
-    withdraw(7, 2000).await.unwrap(); // partially withdraw vested
-    assert_eq!(lockup_status(7).await, (10 * 24 * 60 * 60, 10000, 8000));
+    assert_eq!(
+        lockup_status(7).await,
+        (4 * day + hour, 10 * day, 100, 100, 40)
+    );
+    withdraw(7, 20).await.unwrap(); // partially withdraw vested
+    assert_eq!(
+        lockup_status(7).await,
+        (4 * day + hour, 10 * day, 100, 80, 20)
+    );
     reset_lockup(7, 5)
         .await
         .expect_err("can't relock for less periods");
     reset_lockup(7, 6).await.unwrap();
-    assert_eq!(lockup_status(7).await, (6 * 24 * 60 * 60, 8000, 8000));
+    assert_eq!(lockup_status(7).await, (0, 6 * day, 80, 80, 0));
     reset_lockup(7, 8).await.unwrap();
-    assert_eq!(lockup_status(7).await, (8 * 24 * 60 * 60, 8000, 8000));
+    assert_eq!(lockup_status(7).await, (0, 8 * day, 80, 80, 0));
 
     // advance three more days
-    addin
-        .set_time_offset(&registrar, &realm_authority, 8 * 25 * 60 * 60)
-        .await;
+    advance_time(3 * day + hour).await;
     context.solana.advance_clock_by_slots(2).await;
 
-    assert_eq!(lockup_status(7).await, (8 * 24 * 60 * 60, 8000, 8000));
-    deposit(7, 1000).await.unwrap();
-    assert_eq!(lockup_status(7).await, (5 * 24 * 60 * 60, 6000, 9000)); // 3000 vested
+    assert_eq!(
+        lockup_status(7).await,
+        (3 * day + hour, 8 * day, 80, 80, 30)
+    );
+    deposit(7, 10).await.unwrap();
+    assert_eq!(lockup_status(7).await, (hour, 5 * day, 60, 90, 30));
 
     context.solana.advance_clock_by_slots(2).await; // avoid deposit and withdraw in one slot
 
-    withdraw(7, 2000).await.unwrap(); // partially withdraw vested
-    assert_eq!(lockup_status(7).await, (5 * 24 * 60 * 60, 6000, 7000));
+    withdraw(7, 20).await.unwrap(); // partially withdraw vested
+    assert_eq!(lockup_status(7).await, (hour, 5 * day, 60, 70, 10));
     reset_lockup(7, 10).await.unwrap();
-    assert_eq!(lockup_status(7).await, (10 * 24 * 60 * 60, 7000, 7000));
+    assert_eq!(lockup_status(7).await, (0, 10 * day, 70, 70, 0));
 
     // tests for cliff vesting
-    addin.set_time_offset(&registrar, &realm_authority, 0).await;
-    context.solana.advance_clock_by_slots(2).await;
-
     addin
         .create_deposit_entry(
             &registrar,
@@ -169,41 +189,41 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
         )
         .await
         .unwrap();
-    deposit(5, 8000).await.unwrap();
-    assert_eq!(lockup_status(5).await, (3 * 24 * 60 * 60, 8000, 8000));
+    deposit(5, 80).await.unwrap();
+    assert_eq!(lockup_status(5).await, (0, 3 * day, 80, 80, 0));
     reset_lockup(5, 2)
         .await
         .expect_err("can't relock for less periods");
     reset_lockup(5, 3).await.unwrap(); // just resets start to current timestamp
-    assert_eq!(lockup_status(5).await, (3 * 24 * 60 * 60, 8000, 8000));
+    assert_eq!(lockup_status(5).await, (0, 3 * day, 80, 80, 0));
     reset_lockup(5, 4).await.unwrap();
-    assert_eq!(lockup_status(5).await, (4 * 24 * 60 * 60, 8000, 8000));
+    assert_eq!(lockup_status(5).await, (0, 4 * day, 80, 80, 0));
 
     // advance to end of cliff
-    addin
-        .set_time_offset(&registrar, &realm_authority, 4 * 25 * 60 * 60)
-        .await;
+    advance_time(4 * day + hour).await;
     context.solana.advance_clock_by_slots(2).await;
 
-    assert_eq!(lockup_status(5).await, (4 * 24 * 60 * 60, 8000, 8000));
+    assert_eq!(
+        lockup_status(5).await,
+        (4 * day + hour, 4 * day, 80, 80, 80)
+    );
     reset_lockup(5, 1).await.unwrap();
-    assert_eq!(lockup_status(5).await, (1 * 24 * 60 * 60, 8000, 8000));
-    withdraw(5, 1000).await.expect_err("nothing unlocked");
+    assert_eq!(lockup_status(5).await, (0, 1 * day, 80, 80, 0));
+    withdraw(5, 10).await.expect_err("nothing unlocked");
 
     // advance to end of cliff again
-    addin
-        .set_time_offset(&registrar, &realm_authority, 5 * 25 * 60 * 60)
-        .await;
+    advance_time(day + hour).await;
     context.solana.advance_clock_by_slots(2).await;
 
-    withdraw(5, 1000).await.unwrap();
-    assert_eq!(lockup_status(5).await, (1 * 24 * 60 * 60, 8000, 7000));
-    deposit(5, 500).await.unwrap();
-    assert_eq!(lockup_status(5).await, (0 * 24 * 60 * 60, 500, 7500));
+    assert_eq!(lockup_status(5).await, (day + hour, 1 * day, 80, 80, 80));
+    withdraw(5, 10).await.unwrap();
+    assert_eq!(lockup_status(5).await, (day + hour, 1 * day, 80, 70, 70));
+    deposit(5, 5).await.unwrap();
+    assert_eq!(lockup_status(5).await, (hour, 0, 5, 75, 75));
     reset_lockup(5, 1).await.unwrap();
-    assert_eq!(lockup_status(5).await, (1 * 24 * 60 * 60, 7500, 7500));
-    deposit(5, 1500).await.unwrap();
-    assert_eq!(lockup_status(5).await, (1 * 24 * 60 * 60, 9000, 9000));
+    assert_eq!(lockup_status(5).await, (0, 1 * day, 75, 75, 0));
+    deposit(5, 15).await.unwrap();
+    assert_eq!(lockup_status(5).await, (0, 1 * day, 90, 90, 0));
 
     Ok(())
 }

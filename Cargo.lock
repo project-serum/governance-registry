@@ -3197,7 +3197,6 @@ dependencies = [
  "anchor-spl",
  "bincode",
  "bytemuck",
- "futures",
  "serde",
  "solana-logger",
  "solana-program",
