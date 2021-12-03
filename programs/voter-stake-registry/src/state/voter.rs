@@ -2,6 +2,7 @@ use crate::error::*;
 use crate::state::deposit_entry::DepositEntry;
 use crate::state::registrar::Registrar;
 use anchor_lang::prelude::*;
+use spl_governance::state::token_owner_record;
 
 /// User account for minting voting rights.
 #[account(zero_copy)]
@@ -37,5 +38,23 @@ impl Voter {
         let d = &mut self.deposits[index];
         require!(d.is_used, InvalidDepositEntryIndex);
         Ok(d)
+    }
+
+    pub fn load_token_owner_record(
+        &self,
+        account_info: &AccountInfo,
+        registrar: &Registrar,
+    ) -> Result<token_owner_record::TokenOwnerRecord> {
+        let record = token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
+            &registrar.governance_program_id,
+            account_info,
+            &registrar.realm,
+            &registrar.realm_governing_token_mint,
+        )?;
+        require!(
+            record.governing_token_owner == self.voter_authority,
+            InvalidTokenOwnerRecord
+        );
+        Ok(record)
     }
 }

@@ -2,7 +2,6 @@ use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-use spl_governance::state::token_owner_record;
 
 #[derive(Accounts)]
 pub struct WithdrawOrClawback<'info> {
@@ -76,18 +75,11 @@ pub fn withdraw(
     );
 
     // Governance may forbid withdraws, for example when engaged in a vote.
-    let token_owner_record_data =
-        token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
-            &registrar.governance_program_id,
-            &ctx.accounts.token_owner_record.to_account_info(),
-            &registrar.realm,
-            &registrar.realm_governing_token_mint,
-        )?;
-    require!(
-        token_owner_record_data.governing_token_owner == voter.voter_authority,
-        InvalidTokenOwnerRecord
-    );
-    token_owner_record_data.assert_can_withdraw_governing_tokens()?;
+    let token_owner_record = voter.load_token_owner_record(
+        &ctx.accounts.token_owner_record.to_account_info(),
+        registrar,
+    )?;
+    token_owner_record.assert_can_withdraw_governing_tokens()?;
 
     // Must not withdraw in the same slot as depositing, to prevent people
     // depositing, having the vote weight updated, withdrawing and then

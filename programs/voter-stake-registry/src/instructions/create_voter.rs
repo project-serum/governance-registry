@@ -3,7 +3,6 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
-use spl_governance::state::token_owner_record;
 use std::mem::size_of;
 
 pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
@@ -88,19 +87,6 @@ pub fn create_voter(
     let voter_authority = ctx.accounts.voter_authority.key();
     let voter_weight_record = &mut ctx.accounts.voter_weight_record;
 
-    // Validate the token owner record.
-    let token_owner_record_data =
-        token_owner_record::get_token_owner_record_data_for_realm_and_governing_mint(
-            &registrar.governance_program_id,
-            &ctx.accounts.token_owner_record.to_account_info(),
-            &registrar.realm,
-            &registrar.realm_governing_token_mint,
-        )?;
-    require!(
-        token_owner_record_data.governing_token_owner == voter_authority,
-        InvalidTokenOwnerRecord
-    );
-
     // Init the voter.
     voter.voter_bump = voter_bump;
     voter.voter_weight_record_bump = voter_weight_record_bump;
@@ -112,6 +98,12 @@ pub fn create_voter(
     voter_weight_record.realm = registrar.realm;
     voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
     voter_weight_record.governing_token_owner = voter_authority;
+
+    // Validate the token owner record.
+    voter.load_token_owner_record(
+        &ctx.accounts.token_owner_record.to_account_info(),
+        registrar,
+    )?;
 
     Ok(())
 }
