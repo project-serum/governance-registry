@@ -48,13 +48,12 @@ realm authority to:
 
 1. Call `CreateVoter` on the addin (first time only). Use the same
    voter_authority that was used for registering with spl-governance.
-2. Call `CreateDeposit` for the voter with `LockupKind::None`
+2. Call `CreateDepositEntry` for the voter with `LockupKind::None`
    and the token mint for that tokens are to be deposited. (first time only)
 
    This creates a new deposit entry that can be used for depositing and
-   withdrawing funds without lockup. If it's the voter's first deposit entry,
-   it will have deposit id 0.
-3. Call `Deposit` for the voter and deposit id to deposit funds.
+   withdrawing funds without lockup.
+3. Call `Deposit` for the voter and same deposit entry id to deposit funds.
 4. To vote, call `UpdateVoterWeightRecord` on the addin and then call `CastVote`
    on spl-governance in the same transaction, passing the voter weight record
    to both.
@@ -62,9 +61,9 @@ realm authority to:
 
 ## Give Grants of Locked Tokens
 
-1. Ask the recepient to `CreateVoter` and `CreateDeposit` with the desired lock
-   up period, vesting and `allow_clawback=true`. Double check the address and
-   deposit id they communicate.
+1. Ask the recepient to `CreateVoter` and `CreateDepositEntry` with the desired
+   lock up period, vesting and `allow_clawback=true`. Double check the address
+   and deposit entry id they communicate.
 2. Make a proposal to call `Deposit` for depositing tokens into their locked
    deposit entry.
 3. If necessary, later make a proposal to call `Clawback` on their deposit to
