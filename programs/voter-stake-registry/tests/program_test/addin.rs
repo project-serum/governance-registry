@@ -69,7 +69,6 @@ impl AddinCookie {
                 realm_authority: realm.authority,
                 payer: payer.pubkey(),
                 system_program: solana_sdk::system_program::id(),
-                token_program: spl_token::id(),
                 rent: solana_program::sysvar::rent::id(),
             },
             None,

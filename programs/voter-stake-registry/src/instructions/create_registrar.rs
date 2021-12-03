@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token};
+use anchor_spl::token::Mint;
 use spl_governance::state::realm;
 use std::mem::size_of;
 
@@ -41,7 +41,6 @@ pub struct CreateRegistrar<'info> {
     pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
 }
 
