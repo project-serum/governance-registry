@@ -69,6 +69,71 @@ realm authority to:
 3. If necessary, later make a proposal to call `Clawback` on their deposit to
    retrieve all remaining locked tokens.
 
+# Instruction Overview
+
+## Setup
+
+- [`CreateRegistrar`](programs/voter-stake-registry/src/instructions/create_registrar.rs)
+
+  Creates a Registrar account for a governance realm.
+
+- [`ConfigureVotingMint`](programs/voter-stake-registry/src/instructions/configure_voting_mint.rs)
+
+  Enables voting with tokens from a mint and sets the exchange rate for vote weight.
+
+## Usage
+
+- [`CreateVoter`](programs/voter-stake-registry/src/instructions/create_voter.rs)
+
+  Create a new voter account for a user.
+
+- [`CreateDepositEntry`](programs/voter-stake-registry/src/instructions/create_deposit_entry.rs)
+
+  Create a deposit entry on a voter. A deposit entry is where tokens from a voting mint
+  are deposited, and which may optionally have a lockup period and vesting schedule.
+
+  Each voter can have multiple deposit entries.
+
+- [`Deposit`](programs/voter-stake-registry/src/instructions/deposit.rs)
+
+  Add tokens to a deposit entry.
+
+- [`Withdraw`](programs/voter-stake-registry/src/instructions/withdraw.rs)
+
+  Remove tokens from a deposit entry, either unlocked or vested.
+
+- [`ResetLockup`](programs/voter-stake-registry/src/instructions/reset_lockup.rs)
+
+  Re-lock tokens where the lockup has expired, or increase the duration of the lockup.
+
+- [`UpdateVoterWeightRecord`](programs/voter-stake-registry/src/instructions/update_voter_weight_record.rs)
+
+  Write the current voter weight to the account that spl-governance can read to
+  prepare for voting.
+
+- [`CloseDepositEntry`](programs/voter-stake-registry/src/instructions/close_deposit_entry.rs)
+
+  Close an empty deposit entry, so it can be reused for a different mint or lockup type.
+
+- [`CloseVoter`](programs/voter-stake-registry/src/instructions/close_deposit_entry.rs)
+
+  Close an empty voter, reclaiming rent.
+
+## Special
+
+- [`Clawback`](programs/voter-stake-registry/src/instructions/close_deposit_entry.rs)
+
+  As the clawback authority, claim locked tokens from a voter's deposit entry that
+  has opted-in to clawback.
+
+- [`UpdateMaxVoteWeight`](programs/voter-stake-registry/src/instructions/update_max_vote_weight.rs)
+
+  Unfinished instruction for telling spl-governance about the total maximum vote weight.
+
+- [`SetTimeOffset`](programs/voter-stake-registry/src/instructions/set_time_offset.rs)
+
+  Debug instruction for advancing time in tests. Not usable.
+
 
 # License
 
