@@ -22,13 +22,7 @@ pub fn reset_lockup(
     msg!("--------reset_lockup--------");
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    require!(
-        voter.deposits.len() > deposit_entry_index as usize,
-        InvalidDepositEntryIndex
-    );
-
-    let d = &mut voter.deposits[deposit_entry_index as usize];
-    require!(d.is_used, InvalidDepositEntryIndex);
+    let d = voter.active_deposit_mut(deposit_entry_index)?;
 
     // The lockup period can only be increased.
     let curr_ts = registrar.clock_unix_timestamp();

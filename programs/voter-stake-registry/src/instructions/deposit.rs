@@ -56,8 +56,9 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
     msg!("--------update_deposit--------");
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-
     voter.last_deposit_slot = Clock::get()?.slot;
+
+    let d_entry = voter.active_deposit_mut(deposit_entry_index)?;
 
     // Get the exchange rate entry associated with this deposit.
     let er_idx = registrar
@@ -66,13 +67,6 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
         .position(|r| r.mint == ctx.accounts.deposit_mint.key())
         .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
     let _er_entry = registrar.rates[er_idx];
-
-    require!(
-        voter.deposits.len() > deposit_entry_index as usize,
-        InvalidDepositEntryIndex
-    );
-    let d_entry = &mut voter.deposits[deposit_entry_index as usize];
-    require!(d_entry.is_used, InvalidDepositEntryIndex);
 
     // Deposit tokens into the registrar.
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;

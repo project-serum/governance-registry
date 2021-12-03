@@ -18,23 +18,17 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    require!(
-        voter.deposits.len() > deposit_entry_index.into(),
-        InvalidDepositEntryIndex
-    );
+    let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
     require!(
         ctx.accounts.authority.key() == registrar.clawback_authority,
         InvalidAuthority
     );
-
-    // Get the deposit being withdrawn from.
-    let curr_ts = registrar.clock_unix_timestamp();
-    let deposit_entry = &mut voter.deposits[deposit_entry_index as usize];
-    require!(deposit_entry.is_used, InvalidDepositEntryIndex);
     require!(
         deposit_entry.allow_clawback,
         ErrorCode::ClawbackNotAllowedOnDeposit
     );
+
+    let curr_ts = registrar.clock_unix_timestamp();
     let unvested_amount =
         deposit_entry.amount_initially_locked_native - deposit_entry.vested(curr_ts).unwrap();
 

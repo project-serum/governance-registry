@@ -71,10 +71,6 @@ pub fn withdraw(
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
     require!(
-        voter.deposits.len() > deposit_entry_index.into(),
-        InvalidDepositEntryIndex
-    );
-    require!(
         ctx.accounts.authority.key() == voter.voter_authority,
         InvalidAuthority
     );
@@ -103,8 +99,7 @@ pub fn withdraw(
 
     // Get the deposit being withdrawn from.
     let curr_ts = registrar.clock_unix_timestamp();
-    let deposit_entry = &mut voter.deposits[deposit_entry_index as usize];
-    require!(deposit_entry.is_used, InvalidDepositEntryIndex);
+    let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
     require!(
         deposit_entry.amount_withdrawable(curr_ts) >= amount,
         InsufficientVestedTokens
