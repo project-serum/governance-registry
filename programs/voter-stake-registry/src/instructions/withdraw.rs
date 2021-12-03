@@ -103,12 +103,7 @@ pub fn withdraw(
     );
 
     // Get the exchange rate for the token being withdrawn.
-    let er_idx = registrar
-        .rates
-        .iter()
-        .position(|r| r.mint == ctx.accounts.withdraw_mint.key())
-        .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
-    let _er_entry = registrar.rates[er_idx];
+    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.withdraw_mint.key())?;
     require!(
         er_idx == deposit_entry.rate_idx as usize,
         ErrorCode::InvalidMint

@@ -41,11 +41,7 @@ pub fn create_deposit_entry(
     let start_ts = registrar.clock_unix_timestamp();
 
     // Get the exchange rate entry associated with this deposit.
-    let er_idx = registrar
-        .rates
-        .iter()
-        .position(|r| r.mint == ctx.accounts.deposit_mint.key())
-        .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
+    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.deposit_mint.key())?;
 
     // Get and set up the deposit entry.
     require!(

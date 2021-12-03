@@ -48,6 +48,13 @@ impl Registrar {
     pub fn clock_unix_timestamp(&self) -> i64 {
         Clock::get().unwrap().unix_timestamp + self.time_offset
     }
+
+    pub fn exchange_rate_index_for_mint(&self, mint: Pubkey) -> Result<usize> {
+        self.rates
+            .iter()
+            .position(|r| r.mint == mint)
+            .ok_or(Error::ErrorCode(ErrorCode::ExchangeRateEntryNotFound))
+    }
 }
 
 #[macro_export]
