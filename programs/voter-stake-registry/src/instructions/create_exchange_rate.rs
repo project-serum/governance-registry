@@ -52,8 +52,14 @@ pub fn create_exchange_rate(
     msg!("--------create_exchange_rate--------");
     require!(rate > 0, InvalidRate);
     let registrar = &mut ctx.accounts.registrar;
-    require!((idx as usize) < registrar.rates.len(), InvalidIndex);
-    require!(registrar.rates[idx as usize].rate == 0, RateNotZero);
+    require!(
+        (idx as usize) < registrar.rates.len(),
+        OutOfBoundsRatesIndex
+    );
+    require!(
+        registrar.rates[idx as usize].rate == 0,
+        RatesIndexAlreadyInUse
+    );
     registrar.rates[idx as usize] = registrar.new_rate(ctx.accounts.mint.key(), decimals, rate)?;
     Ok(())
 }

@@ -34,9 +34,9 @@ impl Voter {
 
     pub fn active_deposit_mut(&mut self, index: u8) -> Result<&mut DepositEntry> {
         let index = index as usize;
-        require!(index < self.deposits.len(), InvalidDepositEntryIndex);
+        require!(index < self.deposits.len(), OutOfBoundsDepositEntryIndex);
         let d = &mut self.deposits[index];
-        require!(d.is_used, InvalidDepositEntryIndex);
+        require!(d.is_used, UnusedDepositEntryIndex);
         Ok(d)
     }
 

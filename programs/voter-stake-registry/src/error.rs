@@ -15,9 +15,11 @@ pub enum ErrorCode {
     #[msg("")]
     VotingTokenNonZero,
     #[msg("")]
-    InvalidDepositEntryIndex, // 306
+    OutOfBoundsDepositEntryIndex, // 306
     #[msg("")]
-    InsufficientVestedTokens, // 307
+    UnusedDepositEntryIndex, // 307
+    #[msg("")]
+    InsufficientVestedTokens, // 308
     #[msg("")]
     UnableToConvert,
     #[msg("")]
@@ -27,9 +29,9 @@ pub enum ErrorCode {
     #[msg("")]
     InvalidDays,
     #[msg("")]
-    RateNotZero,
+    RatesIndexAlreadyInUse,
     #[msg("")]
-    InvalidIndex,
+    OutOfBoundsRatesIndex,
     #[msg("Exchange rate decimals cannot be larger than registrar decimals")]
     InvalidDecimals,
     #[msg("")]
