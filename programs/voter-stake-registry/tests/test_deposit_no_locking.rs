@@ -242,7 +242,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_rate,
             5,
             LockupKind::None,
-            5, // shouldn't matter
+            0,
             false,
         )
         .await
@@ -282,7 +282,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_rate,
             0,
             LockupKind::None,
-            1, // shouldn't matter
+            0,
             false,
         )
         .await

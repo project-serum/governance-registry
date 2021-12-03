@@ -87,7 +87,7 @@ pub mod voter_stake_registry {
         ctx: Context<CreateDepositEntry>,
         deposit_entry_index: u8,
         kind: LockupKind,
-        periods: i32,
+        periods: u32,
         allow_clawback: bool,
     ) -> Result<()> {
         instructions::create_deposit_entry(ctx, deposit_entry_index, kind, periods, allow_clawback)
@@ -119,7 +119,7 @@ pub mod voter_stake_registry {
     pub fn reset_lockup(
         ctx: Context<ResetLockup>,
         deposit_entry_index: u8,
-        periods: i64,
+        periods: u32,
     ) -> Result<()> {
         instructions::reset_lockup(ctx, deposit_entry_index, periods)
     }

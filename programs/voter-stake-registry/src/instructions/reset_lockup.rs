@@ -17,7 +17,7 @@ pub struct ResetLockup<'info> {
 pub fn reset_lockup(
     ctx: Context<ResetLockup>,
     deposit_entry_index: u8,
-    periods: i64,
+    periods: u32,
 ) -> Result<()> {
     msg!("--------reset_lockup--------");
     let registrar = &ctx.accounts.registrar;
@@ -36,13 +36,19 @@ pub fn reset_lockup(
         periods as u64 >= d.lockup.periods_left(curr_ts)?,
         InvalidDays
     );
+    require!(periods > 0, InvalidDays);
+    require!(periods as u64 <= d.lockup.kind.max_periods(), InvalidDays);
 
-    // TODO: Check for correctness
+    // Lock up every deposited token again
     d.amount_initially_locked_native = d.amount_deposited_native;
 
     d.lockup.start_ts = curr_ts;
     d.lockup.end_ts = curr_ts
-        .checked_add(periods.checked_mul(d.lockup.kind.period_secs()).unwrap())
+        .checked_add(
+            (periods as i64)
+                .checked_mul(d.lockup.kind.period_secs())
+                .unwrap(),
+        )
         .unwrap();
 
     Ok(())

@@ -28,7 +28,7 @@ pub fn create_deposit_entry(
     ctx: Context<CreateDepositEntry>,
     deposit_entry_index: u8,
     kind: LockupKind,
-    periods: i32,
+    periods: u32,
     allow_clawback: bool,
 ) -> Result<()> {
     msg!("--------create_deposit--------");
@@ -54,6 +54,8 @@ pub fn create_deposit_entry(
     );
     let d_entry = &mut voter.deposits[deposit_entry_index as usize];
     require!(!d_entry.is_used, InvalidDepositEntryIndex);
+
+    require!(periods as u64 <= kind.max_periods(), InvalidDays);
 
     *d_entry = DepositEntry::default();
     d_entry.is_used = true;
