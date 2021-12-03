@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use anchor_spl::token::{self, Token, TokenAccount};
 use std::convert::TryFrom;
 
 #[derive(Accounts)]
@@ -14,22 +14,18 @@ pub struct Deposit<'info> {
     #[account(
         mut,
         associated_token::authority = registrar,
-        associated_token::mint = deposit_mint,
+        associated_token::mint = deposit_token.mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
-    pub deposit_mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
-        constraint = deposit_token.mint == deposit_mint.key(),
         constraint = deposit_token.owner == deposit_authority.key(),
     )]
     pub deposit_token: Box<Account<'info, TokenAccount>>,
     pub deposit_authority: Signer<'info>,
 
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 impl<'info> Deposit<'info> {
@@ -61,7 +57,7 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
     let d_entry = voter.active_deposit_mut(deposit_entry_index)?;
 
     // Get the exchange rate entry associated with this deposit.
-    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.deposit_mint.key())?;
+    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.deposit_token.mint)?;
     require!(er_idx == d_entry.rate_idx as usize, InvalidMint);
 
     // Deposit tokens into the registrar.

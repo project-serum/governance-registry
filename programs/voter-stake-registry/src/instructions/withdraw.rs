@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct WithdrawOrClawback<'info> {
@@ -32,10 +32,9 @@ pub struct WithdrawOrClawback<'info> {
     #[account(
         mut,
         associated_token::authority = registrar,
-        associated_token::mint = withdraw_mint,
+        associated_token::mint = destination.mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
-    pub withdraw_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub destination: Box<Account<'info, TokenAccount>>,
@@ -103,7 +102,7 @@ pub fn withdraw(
     );
 
     // Get the exchange rate for the token being withdrawn.
-    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.withdraw_mint.key())?;
+    let er_idx = registrar.exchange_rate_index_for_mint(ctx.accounts.destination.mint)?;
     require!(
         er_idx == deposit_entry.rate_idx as usize,
         ErrorCode::InvalidMint
