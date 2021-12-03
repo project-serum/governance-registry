@@ -115,13 +115,13 @@ realm authority to:
 
   Close an empty deposit entry, so it can be reused for a different mint or lockup type.
 
-- [`CloseVoter`](programs/voter-stake-registry/src/instructions/close_deposit_entry.rs)
+- [`CloseVoter`](programs/voter-stake-registry/src/instructions/close_voter.rs)
 
   Close an empty voter, reclaiming rent.
 
 ## Special
 
-- [`Clawback`](programs/voter-stake-registry/src/instructions/close_deposit_entry.rs)
+- [`Clawback`](programs/voter-stake-registry/src/instructions/clawback.rs)
 
   As the clawback authority, claim locked tokens from a voter's deposit entry that
   has opted-in to clawback.
