@@ -50,6 +50,10 @@ impl<'info> Deposit<'info> {
 /// `amount`: Number of native tokens to transfer.
 pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------update_deposit--------");
+    if amount == 0 {
+        return Ok(());
+    }
+
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
     voter.last_deposit_slot = Clock::get()?.slot;
@@ -63,18 +67,18 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
         InvalidMint
     );
 
-    // Deposit tokens into the registrar.
-    token::transfer(ctx.accounts.transfer_ctx(), amount)?;
-    d_entry.amount_deposited_native += amount;
-
     // Adding funds to a lockup that is already in progress can be complicated
     // for linear vesting schedules because all added funds should be paid out
     // gradually over the remaining lockup duration.
-    // The logic used is to wrap up the current lockup, and create a new one
-    // for the expected remainder duration.
+    // The logic used is to:
+    // - realize the vesting by reducing the locked amount and moving the start
+    //   if the lockup forward by the number of expired vesting periods
+    // - add the new funds to the locked up token count, so they will vest over
+    //   the remaining periods.
     let curr_ts = registrar.clock_unix_timestamp();
-    d_entry.amount_initially_locked_native -= d_entry.vested(curr_ts)?;
-    d_entry.amount_initially_locked_native += amount;
+    let vested_amount = d_entry.vested(curr_ts)?;
+    assert!(vested_amount <= d_entry.amount_initially_locked_native);
+    d_entry.amount_initially_locked_native -= vested_amount;
     d_entry.lockup.start_ts = d_entry
         .lockup
         .start_ts
@@ -85,6 +89,13 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
                 .unwrap(),
         )
         .unwrap();
+    assert!(d_entry.lockup.start_ts <= d_entry.lockup.end_ts);
+    assert!(d_entry.lockup.period_current(curr_ts)? == 0);
+
+    // Deposit tokens into the registrar and increase the lockup amount too.
+    token::transfer(ctx.accounts.transfer_ctx(), amount)?;
+    d_entry.amount_deposited_native += amount;
+    d_entry.amount_initially_locked_native += amount;
 
     Ok(())
 }

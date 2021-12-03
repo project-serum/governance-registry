@@ -31,11 +31,9 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
     let curr_ts = registrar.clock_unix_timestamp();
     let locked_amount = deposit_entry.amount_locked(curr_ts);
 
-    // sanity check only
-    require!(
-        deposit_entry.amount_deposited_native >= locked_amount,
-        InsufficientVestedTokens
-    );
+    // Update deposit book keeping.
+    assert!(locked_amount <= deposit_entry.amount_deposited_native);
+    deposit_entry.amount_deposited_native -= locked_amount;
 
     // Transfer the tokens to withdraw.
     let registrar_seeds = registrar_seeds!(registrar);
@@ -43,9 +41,6 @@ pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Re
         ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
         locked_amount,
     )?;
-
-    // Update deposit book keeping.
-    deposit_entry.amount_deposited_native -= locked_amount;
 
     // Now that all locked funds are withdrawn, end the lockup
     deposit_entry.amount_initially_locked_native = 0;

@@ -95,11 +95,6 @@ pub fn withdraw(
         deposit_entry.amount_withdrawable(curr_ts) >= amount,
         InsufficientVestedTokens
     );
-    // technically unnecessary
-    require!(
-        deposit_entry.amount_deposited_native >= amount,
-        InsufficientVestedTokens
-    );
 
     // Get the exchange rate for the token being withdrawn.
     let mint_idx = registrar.voting_mint_config_index(ctx.accounts.destination.mint)?;
@@ -108,7 +103,8 @@ pub fn withdraw(
         ErrorCode::InvalidMint
     );
 
-    // Update deposit book keeping.
+    // Bookkeeping for withdrawn funds.
+    assert!(amount <= deposit_entry.amount_deposited_native);
     deposit_entry.amount_deposited_native -= amount;
 
     // Transfer the tokens to withdraw.
