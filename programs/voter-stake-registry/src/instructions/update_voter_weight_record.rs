@@ -30,8 +30,8 @@ pub struct UpdateVoterWeightRecord<'info> {
 /// voter and writes it into a `VoteWeightRecord` account to be used by
 /// the SPL governance program.
 ///
-/// This "revise" instruction should be called in the same transaction,
-/// immediately before voting.
+/// This "revise" instruction must be called immediately before voting, in
+/// the same transaction.
 pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
     msg!("--------update_voter_weight_record--------");
     let registrar = &ctx.accounts.registrar;

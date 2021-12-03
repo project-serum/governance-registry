@@ -13,16 +13,23 @@ pub struct WithdrawOrClawback<'info> {
     #[account(mut, has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
 
-    // token_owner_record is validated in the instruction:
-    // - owned by registrar.governance_program_id
-    // - for the registrar.realm
-    // - for the registrar.realm_governing_token_mint
-    // - governing_token_owner is voter_authority
+    /// The token_owner_record for the voter_authority. This is needed
+    /// to be able to forbid withdraws while the voter is engaged with
+    /// a vote or has an open proposal.
+    ///
+    /// token_owner_record is validated in the instruction:
+    /// - owned by registrar.governance_program_id
+    /// - for the registrar.realm
+    /// - for the registrar.realm_governing_token_mint
+    /// - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
 
-    // The address is verified in the instructions.
-    // For withdraw: must be voter_authority
-    // For clawback: must be registrar.clawback_authority
+    /// The authority that allows the withdraw/clawback.
+    ///
+    /// For withdraw: must be voter.voter_authority
+    /// For clawback: must be registrar.clawback_authority
+    ///
+    /// The address is verified in the instructions.
     pub authority: Signer<'info>,
 
     #[account(
@@ -52,8 +59,9 @@ impl<'info> WithdrawOrClawback<'info> {
 }
 
 /// Withdraws tokens from a deposit entry, if they are unlocked according
-/// to a vesting schedule.
+/// to the deposit's vesting schedule.
 ///
+/// `deposit_entry_index`: The deposit entry to withdraw from.
 /// `amount` is in units of the native currency being withdrawn.
 pub fn withdraw(
     ctx: Context<WithdrawOrClawback>,

@@ -11,6 +11,7 @@ pub struct SetTimeOffset<'info> {
     pub realm_authority: Signer<'info>,
 }
 
+/// A debug-only instruction that advances the time.
 pub fn set_time_offset(ctx: Context<SetTimeOffset>, time_offset: i64) -> Result<()> {
     msg!("--------set_time_offset--------");
     let allowed_program = Pubkey::from_str("GovernanceProgram11111111111111111111111111").unwrap();

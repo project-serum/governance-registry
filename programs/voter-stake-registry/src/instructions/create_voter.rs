@@ -24,6 +24,8 @@ pub struct CreateVoter<'info> {
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
 
+    /// The voter weight record is the account that will be shown to spl-governance
+    /// to prove how much vote weight the voter has. See update_voter_weight_record.
     #[account(
         init,
         seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
