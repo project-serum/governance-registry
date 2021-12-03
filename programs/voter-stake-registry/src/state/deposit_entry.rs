@@ -10,6 +10,7 @@ pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
 
 /// Bookkeeping for a single deposit for a given mint and lockup schedule.
 #[zero_copy]
+#[derive(Default)]
 pub struct DepositEntry {
     // True if the deposit entry is being used.
     pub is_used: bool,

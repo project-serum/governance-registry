@@ -56,7 +56,12 @@ async fn test_clawback() -> Result<(), TransportError> {
     println!("create_voter");
     let voter = context
         .addin
-        .create_voter(&registrar, &voter_authority, &realm_authority)
+        .create_voter(
+            &registrar,
+            &token_owner_record,
+            &voter_authority,
+            &realm_authority,
+        )
         .await;
 
     let realm_ata_initial = context
@@ -80,6 +85,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &voter,
             voter_authority,
             &mngo_rate,
+            0,
             voter_stake_registry::state::lockup::LockupKind::Daily,
             10,
             true,

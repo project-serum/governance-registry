@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::state::deposit_entry::DepositEntry;
 use crate::state::lockup::*;
 use crate::state::registrar::Registrar;
 use crate::state::voter::Voter;
@@ -18,15 +19,17 @@ pub struct CreateDepositEntry<'info> {
 
 /// Creates a new deposit entry.
 ///
-/// Initializes the first free deposit entry with the requested settings.
-/// Will error if no free deposit entries remain.
+/// Initializes a deposit entry with the requested settings.
+/// Will error if the deposit entry is already in use.
 ///
+/// `deposit_entry_index`: deposit entry to use
 /// `kind`: Type of lockup to use.
 /// `period`: How long to lock up, depending on `kind`. See LockupKind::period_secs()
 /// `allow_clawback`: When enabled, the the clawback_authority is allowed to
 ///                   unilaterally claim locked tokens.
 pub fn create_deposit_entry(
     ctx: Context<CreateDepositEntry>,
+    deposit_entry_index: u8,
     kind: LockupKind,
     periods: i32,
     allow_clawback: bool,
@@ -47,15 +50,16 @@ pub fn create_deposit_entry(
         .position(|r| r.mint == ctx.accounts.deposit_mint.key())
         .ok_or(ErrorCode::ExchangeRateEntryNotFound)?;
 
-    // Get and set up the first free deposit entry.
-    let free_entry_idx = voter
-        .deposits
-        .iter()
-        .position(|d_entry| !d_entry.is_used)
-        .ok_or(ErrorCode::DepositEntryFull)?;
-    let d_entry = &mut voter.deposits[free_entry_idx];
+    // Get and set up the deposit entry.
+    require!(
+        voter.deposits.len() > deposit_entry_index as usize,
+        InvalidDepositEntryIndex
+    );
+    let d_entry = &mut voter.deposits[deposit_entry_index as usize];
+    require!(!d_entry.is_used, InvalidDepositEntryIndex);
+
+    *d_entry = DepositEntry::default();
     d_entry.is_used = true;
-    d_entry.rate_idx = free_entry_idx as u8;
     d_entry.rate_idx = er_idx as u8;
     d_entry.amount_deposited_native = 0;
     d_entry.amount_initially_locked_native = 0;

@@ -72,7 +72,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
         .await;
 
     let voter = addin
-        .create_voter(&registrar, &voter_authority, &payer)
+        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
         .await;
 
     let reference_account = context.users[1].token_accounts[0];
@@ -122,6 +122,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
+            0,
             voter_stake_registry::state::lockup::LockupKind::Cliff,
             3, // days
             false,

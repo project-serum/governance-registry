@@ -40,7 +40,7 @@ async fn test_basic() -> Result<(), TransportError> {
 
     let voter = context
         .addin
-        .create_voter(&registrar, &voter_authority, &payer)
+        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
         .await;
 
     // test deposit and withdraw
@@ -62,6 +62,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &voter,
             voter_authority,
             &mngo_rate,
+            0,
             voter_stake_registry::state::lockup::LockupKind::Cliff,
             0,
             false,

@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::state::deposit_entry::DepositEntry;
 use crate::state::voter::Voter;
 use anchor_lang::prelude::*;
 
@@ -37,6 +38,8 @@ pub fn close_deposit_entry(ctx: Context<CloseDepositEntry>, deposit_entry_index:
         );
     }
 
+    *d = DepositEntry::default();
     d.is_used = false;
+
     Ok(())
 }

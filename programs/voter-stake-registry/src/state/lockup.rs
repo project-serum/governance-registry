@@ -39,6 +39,17 @@ pub struct Lockup {
     pub padding: [u8; 16],
 }
 
+impl Default for Lockup {
+    fn default() -> Self {
+        Self {
+            kind: LockupKind::None,
+            start_ts: 0,
+            end_ts: 0,
+            padding: [0; 16],
+        }
+    }
+}
+
 impl Lockup {
     /// Returns the number of periods left on the lockup.
     pub fn periods_left(&self, curr_ts: i64) -> Result<u64> {

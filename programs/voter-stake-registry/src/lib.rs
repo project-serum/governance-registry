@@ -85,11 +85,12 @@ pub mod voter_stake_registry {
 
     pub fn create_deposit_entry(
         ctx: Context<CreateDepositEntry>,
+        deposit_entry_index: u8,
         kind: LockupKind,
         periods: i32,
         allow_clawback: bool,
     ) -> Result<()> {
-        instructions::create_deposit_entry(ctx, kind, periods, allow_clawback)
+        instructions::create_deposit_entry(ctx, deposit_entry_index, kind, periods, allow_clawback)
     }
 
     pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {

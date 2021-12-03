@@ -89,9 +89,8 @@ pub fn withdraw(
             &registrar.realm,
             &registrar.realm_governing_token_mint,
         )?;
-    let token_owner = voter.voter_authority;
     require!(
-        token_owner_record_data.governing_token_owner == token_owner,
+        token_owner_record_data.governing_token_owner == voter.voter_authority,
         InvalidTokenOwnerRecord
     );
     token_owner_record_data.assert_can_withdraw_governing_tokens()?;

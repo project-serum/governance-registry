@@ -62,8 +62,12 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .await;
 
     let voter_authority = &context.users[1].key;
+    let voter2_authority = &context.users[2].key;
     let token_owner_record = realm
         .create_token_owner_record(voter_authority.pubkey(), &payer)
+        .await;
+    let token_owner_record2 = realm
+        .create_token_owner_record(voter2_authority.pubkey(), &payer)
         .await;
 
     let registrar = addin
@@ -74,12 +78,11 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .await;
 
     let voter = addin
-        .create_voter(&registrar, &voter_authority, &payer)
+        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
         .await;
 
-    let voter2_authority = &context.users[2].key;
     let voter2 = addin
-        .create_voter(&registrar, &voter2_authority, &payer)
+        .create_voter(&registrar, &token_owner_record2, &voter2_authority, &payer)
         .await;
 
     let reference_account = context.users[1].token_accounts[0];
@@ -128,6 +131,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
+            0,
             LockupKind::None,
             0,
             false,
@@ -158,6 +162,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
+            1,
             LockupKind::None,
             0,
             false,
@@ -235,6 +240,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter2,
             &voter2_authority,
             &mngo_rate,
+            5,
             LockupKind::None,
             5, // shouldn't matter
             false,
@@ -248,7 +254,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_rate,
             &voter2_authority,
             context.users[2].token_accounts[0],
-            0,
+            5,
             1000,
         )
         .await
@@ -260,7 +266,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         reference_account,
         &voter2,
         &mngo_rate,
-        0,
+        5,
     )
     .await;
     assert_eq!(voter2_balances.deposit, 1000);
@@ -274,6 +280,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &voter,
             &voter_authority,
             &mngo_rate,
+            0,
             LockupKind::None,
             1, // shouldn't matter
             false,

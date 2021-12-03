@@ -159,6 +159,7 @@ impl AddinCookie {
     pub async fn create_voter(
         &self,
         registrar: &RegistrarCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
         authority: &Keypair,
         payer: &Keypair,
     ) -> VoterCookie {
@@ -189,6 +190,7 @@ impl AddinCookie {
             &voter_stake_registry::accounts::CreateVoter {
                 voter,
                 voter_weight_record,
+                token_owner_record: token_owner_record.address,
                 registrar: registrar.address,
                 voter_authority: authority.pubkey(),
                 payer: payer.pubkey(),
@@ -227,12 +229,14 @@ impl AddinCookie {
         voter: &VoterCookie,
         voter_authority: &Keypair,
         exchange_rate: &ExchangeRateCookie,
+        deposit_entry_index: u8,
         lockup_kind: voter_stake_registry::state::lockup::LockupKind,
         periods: i32,
         allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
         let data = anchor_lang::InstructionData::data(
             &voter_stake_registry::instruction::CreateDepositEntry {
+                deposit_entry_index,
                 kind: lockup_kind,
                 periods,
                 allow_clawback,
