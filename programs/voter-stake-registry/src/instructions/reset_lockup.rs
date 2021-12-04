@@ -4,9 +4,15 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct ResetLockup<'info> {
+    // checking the PDA address it just an extra precaution,
+    // the other constraints must be exhaustive
     pub registrar: Box<Account<'info, Registrar>>,
-
-    #[account(mut, has_one = voter_authority, has_one = registrar)]
+    #[account(
+        mut,
+        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
+        bump = voter.load()?.voter_bump,
+        has_one = voter_authority,
+        has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
 }

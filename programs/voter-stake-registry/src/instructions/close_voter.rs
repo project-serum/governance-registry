@@ -4,7 +4,14 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct CloseVoter<'info> {
-    #[account(mut, has_one = voter_authority, close = sol_destination)]
+    // checking the PDA address it just an extra precaution,
+    // the other constraints must be exhaustive
+    #[account(
+        mut,
+        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
+        bump = voter.load()?.voter_bump,
+        has_one = voter_authority,
+        close = sol_destination)]
     pub voter: AccountLoader<'info, Voter>,
     pub voter_authority: Signer<'info>,
     pub sol_destination: UncheckedAccount<'info>,

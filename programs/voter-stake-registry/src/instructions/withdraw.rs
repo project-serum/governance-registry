@@ -7,7 +7,13 @@ use anchor_spl::token::{self, Token, TokenAccount};
 pub struct WithdrawOrClawback<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
-    #[account(mut, has_one = registrar)]
+    // checking the PDA address it just an extra precaution,
+    // the other constraints must be exhaustive
+    #[account(
+        mut,
+        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.voter_authority.key().as_ref()],
+        bump = voter.load()?.voter_bump,
+        has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
 
     /// The token_owner_record for the voter_authority. This is needed
