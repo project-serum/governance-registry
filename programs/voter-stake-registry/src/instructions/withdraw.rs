@@ -13,8 +13,11 @@ pub struct Withdraw<'info> {
         mut,
         seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter.load()?.voter_bump,
-        has_one = registrar)]
+        has_one = registrar,
+        has_one = voter_authority,
+    )]
     pub voter: AccountLoader<'info, Voter>,
+    pub voter_authority: Signer<'info>,
 
     /// The token_owner_record for the voter_authority. This is needed
     /// to be able to forbid withdraws while the voter is engaged with
@@ -26,12 +29,6 @@ pub struct Withdraw<'info> {
     /// - for the registrar.realm_governing_token_mint
     /// - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
-
-    /// The authority that allows the withdraw.
-    #[account(
-        constraint = voter_authority.key() == voter.load()?.voter_authority,
-    )]
-    pub voter_authority: Signer<'info>,
 
     #[account(
         mut,

@@ -4,11 +4,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token;
 use anchor_spl::token::{Token, TokenAccount};
 
-use super::withdraw::Withdraw;
-
 #[derive(Accounts)]
 pub struct Clawback<'info> {
+    #[account(has_one = clawback_authority)]
     pub registrar: Box<Account<'info, Registrar>>,
+    pub clawback_authority: Signer<'info>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
@@ -29,12 +29,6 @@ pub struct Clawback<'info> {
     /// - for the registrar.realm_governing_token_mint
     /// - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
-
-    /// The authority that allows the clawback.
-    #[account(
-        constraint = clawback_authority.key() == registrar.realm_authority,
-    )]
-    pub clawback_authority: Signer<'info>,
 
     #[account(
         mut,
