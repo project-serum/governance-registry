@@ -11,7 +11,7 @@ pub struct UpdateVoterWeightRecord<'info> {
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
-        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.voter_authority.key().as_ref()],
         bump = voter.load()?.voter_bump,
         has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,

@@ -97,15 +97,11 @@ pub mod voter_stake_registry {
         instructions::deposit(ctx, deposit_entry_index, amount)
     }
 
-    pub fn withdraw(
-        ctx: Context<WithdrawOrClawback>,
-        deposit_entry_index: u8,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
         instructions::withdraw(ctx, deposit_entry_index, amount)
     }
 
-    pub fn clawback(ctx: Context<WithdrawOrClawback>, deposit_entry_index: u8) -> Result<()> {
+    pub fn clawback(ctx: Context<Clawback>, deposit_entry_index: u8) -> Result<()> {
         instructions::clawback(ctx, deposit_entry_index)
     }
 

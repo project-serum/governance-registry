@@ -11,7 +11,7 @@ pub struct CreateDepositEntry<'info> {
     // the other constraints must be exhaustive
     #[account(
         mut,
-        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter.load()?.voter_bump,
         has_one = registrar,
         has_one = voter_authority)]

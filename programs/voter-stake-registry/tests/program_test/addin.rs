@@ -325,13 +325,13 @@ impl AddinCookie {
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::WithdrawOrClawback {
+            &voter_stake_registry::accounts::Clawback {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
                 vault: voting_mint.vault,
                 destination: token_address,
-                authority: clawback_authority.pubkey(),
+                clawback_authority: clawback_authority.pubkey(),
                 token_program: spl_token::id(),
             },
             None,
@@ -369,13 +369,13 @@ impl AddinCookie {
             });
 
         let accounts = anchor_lang::ToAccountMetas::to_account_metas(
-            &voter_stake_registry::accounts::WithdrawOrClawback {
+            &voter_stake_registry::accounts::Withdraw {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
                 vault: voting_mint.vault,
                 destination: token_address,
-                authority: authority.pubkey(),
+                voter_authority: authority.pubkey(),
                 token_program: spl_token::id(),
             },
             None,

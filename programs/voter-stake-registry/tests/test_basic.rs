@@ -116,6 +116,21 @@ async fn test_basic() -> Result<(), TransportError> {
             &voter,
             &token_owner_record,
             &mngo_voting_mint,
+            &&context.users[2].key,
+            reference_account,
+            0,
+            10000,
+        )
+        .await
+        .expect_err("fails because voter_authority is invalid");
+
+    context
+        .addin
+        .withdraw(
+            &registrar,
+            &voter,
+            &token_owner_record,
+            &mngo_voting_mint,
             &voter_authority,
             reference_account,
             0,

@@ -4,14 +4,14 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
-pub struct WithdrawOrClawback<'info> {
+pub struct Withdraw<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
     #[account(
         mut,
-        seeds = [voter.load()?.registrar.key().as_ref(), b"voter".as_ref(), voter.load()?.voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter.load()?.voter_bump,
         has_one = registrar)]
     pub voter: AccountLoader<'info, Voter>,
@@ -27,13 +27,11 @@ pub struct WithdrawOrClawback<'info> {
     /// - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
 
-    /// The authority that allows the withdraw/clawback.
-    ///
-    /// For withdraw: must be voter.voter_authority
-    /// For clawback: must be registrar.clawback_authority
-    ///
-    /// The address is verified in the instructions.
-    pub authority: Signer<'info>,
+    /// The authority that allows the withdraw.
+    #[account(
+        constraint = voter_authority.key() == voter.load()?.voter_authority,
+    )]
+    pub voter_authority: Signer<'info>,
 
     #[account(
         mut,
@@ -48,7 +46,7 @@ pub struct WithdrawOrClawback<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'info> WithdrawOrClawback<'info> {
+impl<'info> Withdraw<'info> {
     pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
         let program = self.token_program.to_account_info();
         let accounts = token::Transfer {
@@ -65,19 +63,11 @@ impl<'info> WithdrawOrClawback<'info> {
 ///
 /// `deposit_entry_index`: The deposit entry to withdraw from.
 /// `amount` is in units of the native currency being withdrawn.
-pub fn withdraw(
-    ctx: Context<WithdrawOrClawback>,
-    deposit_entry_index: u8,
-    amount: u64,
-) -> Result<()> {
+pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------withdraw--------");
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    require!(
-        ctx.accounts.authority.key() == voter.voter_authority,
-        InvalidAuthority
-    );
 
     // Governance may forbid withdraws, for example when engaged in a vote.
     let token_owner_record = voter.load_token_owner_record(

@@ -161,6 +161,21 @@ async fn test_clawback() -> Result<(), TransportError> {
             &voter,
             &token_owner_record,
             &mngo_voting_mint,
+            &voter_authority,
+            realm_authority_ata,
+            0,
+        )
+        .await
+        .expect_err("fails because clawback_authority is invalid");
+
+    println!("clawback");
+    context
+        .addin
+        .clawback(
+            &registrar,
+            &voter,
+            &token_owner_record,
+            &mngo_voting_mint,
             &realm_authority,
             realm_authority_ata,
             0,
