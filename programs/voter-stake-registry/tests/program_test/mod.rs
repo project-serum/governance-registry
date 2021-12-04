@@ -94,6 +94,7 @@ impl TestContext {
                 base_lot: 100 as f64,
                 quote_lot: 10 as f64,
                 pubkey: None, //Some(mngo_token::ID),
+                authority: Keypair::new(),
             }, // symbol: "MNGO".to_string()
             MintCookie {
                 index: 1,
@@ -102,6 +103,7 @@ impl TestContext {
                 base_lot: 0 as f64,
                 quote_lot: 0 as f64,
                 pubkey: None,
+                authority: Keypair::new(),
             }, // symbol: "USDC".to_string()
         ];
         // Add mints in loop
@@ -118,7 +120,7 @@ impl TestContext {
                 u32::MAX as u64,
                 &Mint {
                     is_initialized: true,
-                    mint_authority: COption::Some(Pubkey::new_unique()),
+                    mint_authority: COption::Some(mints[mint_index].authority.pubkey()),
                     decimals: mints[mint_index].decimals,
                     ..Mint::default()
                 },

@@ -21,7 +21,7 @@ pub struct RegistrarCookie {
     pub mint: MintCookie,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct VotingMintConfigCookie {
     pub mint: MintCookie,
     pub vault: Pubkey,
@@ -92,7 +92,7 @@ impl AddinCookie {
         RegistrarCookie {
             address: registrar,
             authority: realm.authority,
-            mint: realm.community_token_mint,
+            mint: realm.community_token_mint.clone(),
         }
     }
 
@@ -395,12 +395,11 @@ impl AddinCookie {
             .await
     }
 
-    #[allow(dead_code)]
-    pub async fn update_voter_weight_record(
+    pub fn update_voter_weight_record_instruction(
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-    ) -> std::result::Result<voter_stake_registry::state::VoterWeightRecord, TransportError> {
+    ) -> Instruction {
         let data = anchor_lang::InstructionData::data(
             &voter_stake_registry::instruction::UpdateVoterWeightRecord {},
         );
@@ -415,11 +414,20 @@ impl AddinCookie {
             None,
         );
 
-        let instructions = vec![Instruction {
+        Instruction {
             program_id: self.program_id,
             accounts,
             data,
-        }];
+        }
+    }
+
+    #[allow(dead_code)]
+    pub async fn update_voter_weight_record(
+        &self,
+        registrar: &RegistrarCookie,
+        voter: &VoterCookie,
+    ) -> std::result::Result<voter_stake_registry::state::VoterWeightRecord, TransportError> {
+        let instructions = vec![self.update_voter_weight_record_instruction(registrar, voter)];
 
         self.solana.process_transaction(&instructions, None).await?;
 

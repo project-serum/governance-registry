@@ -1,6 +1,7 @@
 use bytemuck::{bytes_of, Contiguous};
 use solana_program::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
 
 #[allow(dead_code)]
 pub fn gen_signer_seeds<'a>(nonce: &'a u64, acc_pk: &'a Pubkey) -> [&'a [u8]; 2] {
@@ -25,4 +26,9 @@ pub fn create_signer_key_and_nonce(program_id: &Pubkey, acc_pk: &Pubkey) -> (Pub
         }
     }
     panic!("Could not generate signer key");
+}
+
+#[allow(dead_code)]
+pub fn clone_keypair(keypair: &Keypair) -> Keypair {
+    Keypair::from_base58_string(&keypair.to_base58_string())
 }

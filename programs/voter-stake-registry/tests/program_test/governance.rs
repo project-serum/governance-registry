@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
+use solana_program::instruction::Instruction;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
+use spl_governance::state::token_owner_record;
 
 use crate::*;
 
@@ -21,9 +23,25 @@ pub struct GovernanceRealmCookie {
     pub community_token_account: Pubkey,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TokenOwnerRecordCookie {
     pub address: Pubkey,
+}
+
+pub struct AccountGovernanceCookie {
+    pub address: Pubkey,
+    pub governed_account: Pubkey,
+}
+
+pub struct MintGovernanceCookie {
+    pub address: Pubkey,
+    pub governed_mint: Pubkey,
+}
+
+#[derive(Debug)]
+pub struct ProposalCookie {
+    pub address: Pubkey,
+    pub owner_token_owner_record: TokenOwnerRecordCookie,
 }
 
 impl GovernanceCookie {
@@ -119,5 +137,237 @@ impl GovernanceRealmCookie {
             .unwrap();
 
         TokenOwnerRecordCookie { address: record }
+    }
+
+    pub async fn create_account_governance(
+        &self,
+        governed_account: Pubkey,
+        voter: &VoterCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        authority: &Keypair,
+        payer: &Keypair,
+        vwr_instruction: Instruction,
+    ) -> AccountGovernanceCookie {
+        let account_governance = spl_governance::state::governance::get_account_governance_address(
+            &self.governance.program_id,
+            &self.realm,
+            &governed_account,
+        );
+
+        let instructions = vec![
+            vwr_instruction,
+            spl_governance::instruction::create_account_governance(
+                &self.governance.program_id,
+                &self.realm,
+                &governed_account,
+                &token_owner_record.address,
+                &payer.pubkey(),
+                &authority.pubkey(),
+                Some(voter.voter_weight_record),
+                spl_governance::state::governance::GovernanceConfig {
+                    vote_threshold_percentage:
+                        spl_governance::state::enums::VoteThresholdPercentage::YesVote(50),
+                    min_community_tokens_to_create_proposal: 1000,
+                    min_instruction_hold_up_time: 0,
+                    max_voting_time: 10,
+                    vote_weight_source: spl_governance::state::enums::VoteWeightSource::Deposit,
+                    proposal_cool_off_time: 0,
+                    min_council_tokens_to_create_proposal: 1,
+                },
+            ),
+        ];
+
+        let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.governance
+            .solana
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
+            .await
+            .unwrap();
+
+        AccountGovernanceCookie {
+            address: account_governance,
+            governed_account,
+        }
+    }
+
+    pub async fn create_mint_governance(
+        &self,
+        governed_mint: Pubkey,
+        governed_mint_authority: &Keypair,
+        voter: &VoterCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        authority: &Keypair,
+        payer: &Keypair,
+        vwr_instruction: Instruction,
+    ) -> MintGovernanceCookie {
+        let mint_governance = spl_governance::state::governance::get_mint_governance_address(
+            &self.governance.program_id,
+            &self.realm,
+            &governed_mint,
+        );
+
+        let instructions = vec![
+            vwr_instruction,
+            spl_governance::instruction::create_mint_governance(
+                &self.governance.program_id,
+                &self.realm,
+                &governed_mint,
+                &governed_mint_authority.pubkey(),
+                &token_owner_record.address,
+                &payer.pubkey(),
+                &authority.pubkey(),
+                Some(voter.voter_weight_record),
+                spl_governance::state::governance::GovernanceConfig {
+                    vote_threshold_percentage:
+                        spl_governance::state::enums::VoteThresholdPercentage::YesVote(50),
+                    min_community_tokens_to_create_proposal: 1000,
+                    min_instruction_hold_up_time: 0,
+                    max_voting_time: 10,
+                    vote_weight_source: spl_governance::state::enums::VoteWeightSource::Deposit,
+                    proposal_cool_off_time: 0,
+                    min_council_tokens_to_create_proposal: 1,
+                },
+                true,
+            ),
+        ];
+
+        let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
+        let signer3 = Keypair::from_base58_string(&governed_mint_authority.to_base58_string());
+
+        self.governance
+            .solana
+            .process_transaction(&instructions, Some(&[&signer1, &signer2, &signer3]))
+            .await
+            .unwrap();
+
+        MintGovernanceCookie {
+            address: mint_governance,
+            governed_mint,
+        }
+    }
+
+    pub async fn create_proposal(
+        &self,
+        governance: Pubkey,
+        authority: &Keypair,
+        voter: &VoterCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        payer: &Keypair,
+        vwr_instruction: Instruction,
+    ) -> std::result::Result<ProposalCookie, TransportError> {
+        let proposal = spl_governance::state::proposal::get_proposal_address(
+            &self.governance.program_id,
+            &governance,
+            &self.community_token_mint.pubkey.unwrap(),
+            &0u32.to_le_bytes(),
+        );
+
+        let instructions = vec![
+            vwr_instruction,
+            spl_governance::instruction::create_proposal(
+                &self.governance.program_id,
+                &governance,
+                &token_owner_record.address,
+                &authority.pubkey(),
+                &payer.pubkey(),
+                Some(voter.voter_weight_record),
+                &self.realm,
+                "test proposal".into(),
+                "description".into(),
+                &self.community_token_mint.pubkey.unwrap(),
+                0,
+            ),
+            spl_governance::instruction::add_signatory(
+                &self.governance.program_id,
+                &proposal,
+                &token_owner_record.address,
+                &authority.pubkey(),
+                &payer.pubkey(),
+                &authority.pubkey(),
+            ),
+            spl_governance::instruction::sign_off_proposal(
+                &self.governance.program_id,
+                &proposal,
+                &authority.pubkey(),
+            ),
+        ];
+
+        let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.governance
+            .solana
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
+            .await?;
+
+        Ok(ProposalCookie {
+            address: proposal,
+            owner_token_owner_record: token_owner_record.clone(),
+        })
+    }
+
+    pub async fn cast_vote(
+        &self,
+        governance: Pubkey,
+        proposal: &ProposalCookie,
+        voter: &VoterCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        authority: &Keypair,
+        payer: &Keypair,
+        vwr_instruction: Instruction,
+    ) -> std::result::Result<(), TransportError> {
+        let instructions = vec![
+            vwr_instruction,
+            spl_governance::instruction::cast_vote(
+                &self.governance.program_id,
+                &self.realm,
+                &governance,
+                &proposal.address,
+                &proposal.owner_token_owner_record.address,
+                &token_owner_record.address,
+                &authority.pubkey(),
+                &self.community_token_mint.pubkey.unwrap(),
+                &payer.pubkey(),
+                Some(voter.voter_weight_record),
+                spl_governance::instruction::Vote::Yes,
+            ),
+        ];
+
+        let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.governance
+            .solana
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
+            .await
+    }
+
+    pub async fn relinquish_vote(
+        &self,
+        governance: Pubkey,
+        proposal: &ProposalCookie,
+        token_owner_record: &TokenOwnerRecordCookie,
+        authority: &Keypair,
+        beneficiary: Pubkey,
+    ) -> std::result::Result<(), TransportError> {
+        let instructions = vec![spl_governance::instruction::relinquish_vote(
+            &self.governance.program_id,
+            &governance,
+            &proposal.address,
+            &token_owner_record.address,
+            &self.community_token_mint.pubkey.unwrap(),
+            Some(authority.pubkey()),
+            Some(beneficiary),
+        )];
+
+        let signer = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.governance
+            .solana
+            .process_transaction(&instructions, Some(&[&signer]))
+            .await
     }
 }
