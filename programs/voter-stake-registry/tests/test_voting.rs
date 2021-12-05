@@ -1,7 +1,7 @@
 use anchor_spl::token::TokenAccount;
 use program_test::*;
 use solana_program_test::*;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transport::TransportError};
+use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError};
 use voter_stake_registry::state::LockupKind;
 
 mod program_test;

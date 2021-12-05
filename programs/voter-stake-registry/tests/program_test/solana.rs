@@ -117,6 +117,7 @@ impl SolanaCookie {
         AccountDeserialize::try_deserialize(&mut data_slice).unwrap()
     }
 
+    #[allow(dead_code)]
     pub async fn token_account_balance(&self, address: Pubkey) -> u64 {
         self.get_account::<TokenAccount>(address).await.amount
     }

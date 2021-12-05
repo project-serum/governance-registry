@@ -549,12 +549,14 @@ impl AddinCookie {
 }
 
 impl VotingMintConfigCookie {
+    #[allow(dead_code)]
     pub async fn vault_balance(&self, solana: &SolanaCookie) -> u64 {
         solana.get_account::<TokenAccount>(self.vault).await.amount
     }
 }
 
 impl VoterCookie {
+    #[allow(dead_code)]
     pub async fn deposit_amount(&self, solana: &SolanaCookie, deposit_id: u8) -> u64 {
         solana
             .get_account::<voter_stake_registry::state::Voter>(self.address)

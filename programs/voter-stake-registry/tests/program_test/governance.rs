@@ -3,7 +3,6 @@ use std::sync::Arc;
 use solana_program::instruction::Instruction;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
-use spl_governance::state::token_owner_record;
 
 use crate::*;
 
@@ -139,6 +138,7 @@ impl GovernanceRealmCookie {
         TokenOwnerRecordCookie { address: record }
     }
 
+    #[allow(dead_code)]
     pub async fn create_account_governance(
         &self,
         governed_account: Pubkey,
@@ -192,6 +192,7 @@ impl GovernanceRealmCookie {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn create_mint_governance(
         &self,
         governed_mint: Pubkey,
@@ -249,6 +250,7 @@ impl GovernanceRealmCookie {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn create_proposal(
         &self,
         governance: Pubkey,
@@ -309,6 +311,7 @@ impl GovernanceRealmCookie {
         })
     }
 
+    #[allow(dead_code)]
     pub async fn cast_vote(
         &self,
         governance: Pubkey,
@@ -345,6 +348,7 @@ impl GovernanceRealmCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn relinquish_vote(
         &self,
         governance: Pubkey,
