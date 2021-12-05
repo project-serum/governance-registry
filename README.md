@@ -61,11 +61,10 @@ realm authority to:
 
 ## Give Grants of Locked Tokens
 
-1. Ask the recepient to `CreateVoter` and `CreateDepositEntry` with the desired
-   lock up period, vesting and `allow_clawback=true`. Double check the address
-   and deposit entry id they communicate.
-2. Make a proposal to call `Deposit` for depositing tokens into their locked
-   deposit entry.
+1. Ask the recepient for their desired address.
+2. Make a proposal to call `Grant` for depositing tokens into a new locked
+   deposit entry for their address. Use a governance that either is the realm
+   authority or the token mint's grant authority.
 3. If necessary, later make a proposal to call `Clawback` on their deposit to
    retrieve all remaining locked tokens.
 
