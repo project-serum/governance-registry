@@ -62,7 +62,6 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
 
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    voter.last_deposit_slot = Clock::get()?.slot;
 
     let d_entry = voter.active_deposit_mut(deposit_entry_index)?;
 

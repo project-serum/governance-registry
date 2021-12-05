@@ -98,24 +98,6 @@ async fn test_basic() -> Result<(), TransportError> {
             &voter,
             &token_owner_record,
             &mngo_voting_mint,
-            &voter_authority,
-            reference_account,
-            0,
-            10000,
-        )
-        .await
-        .expect_err("fails because a deposit happened in the same slot");
-
-    // Must advance slots because withdrawing in the same slot as the deposit is forbidden
-    context.solana.advance_clock_by_slots(2).await;
-
-    context
-        .addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &token_owner_record,
-            &mngo_voting_mint,
             &&context.users[2].key,
             reference_account,
             0,

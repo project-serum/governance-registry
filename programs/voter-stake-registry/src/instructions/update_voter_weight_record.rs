@@ -2,8 +2,6 @@ use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
 
-pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
-
 #[derive(Accounts)]
 pub struct UpdateVoterWeightRecord<'info> {
     pub registrar: Box<Account<'info, Registrar>>,
@@ -18,7 +16,7 @@ pub struct UpdateVoterWeightRecord<'info> {
 
     #[account(
         mut,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter.load()?.voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter.load()?.voter_authority.key().as_ref()],
         bump = voter.load()?.voter_weight_record_bump,
         constraint = voter_weight_record.realm == registrar.realm,
         constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,

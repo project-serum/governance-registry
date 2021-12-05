@@ -1,7 +1,6 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
@@ -31,6 +30,18 @@ pub struct Withdraw<'info> {
     /// - governing_token_owner is voter_authority
     pub token_owner_record: UncheckedAccount<'info>,
 
+    /// Withdraws must update the voter weight record, to prevent a stale
+    /// record being used to vote after the withdraw.
+    #[account(
+        mut,
+        seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter_authority.key().as_ref()],
+        bump = voter.load()?.voter_weight_record_bump,
+        constraint = voter_weight_record.realm == registrar.realm,
+        constraint = voter_weight_record.governing_token_owner == voter.load()?.voter_authority,
+        constraint = voter_weight_record.governing_token_mint == registrar.realm_governing_token_mint,
+    )]
+    pub voter_weight_record: Account<'info, VoterWeightRecord>,
+
     #[account(
         mut,
         associated_token::authority = registrar,
@@ -42,9 +53,6 @@ pub struct Withdraw<'info> {
     pub destination: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
-
-    #[account(address = tx_instructions::ID)]
-    pub instructions: UncheckedAccount<'info>,
 }
 
 impl<'info> Withdraw<'info> {
@@ -67,17 +75,6 @@ impl<'info> Withdraw<'info> {
 pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------withdraw--------");
 
-    // TODO: this coule be improved to forbid withdraw and update_voter_weight_record to be in the
-    // same slot
-    // Forbid voting with already withdrawn tokens
-    // e.g. flow
-    // - update voter_weight_record
-    // - withdraw
-    // - vote
-    let ixns = ctx.accounts.instructions.to_account_info();
-    let current_index = tx_instructions::load_current_index_checked(&ixns)? as usize;
-    require!(current_index == 0, ErrorCode::ShouldBeTheFirstIxInATx);
-
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
@@ -88,14 +85,6 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
         registrar,
     )?;
     token_owner_record.assert_can_withdraw_governing_tokens()?;
-
-    // Must not withdraw in the same slot as depositing, to prevent people
-    // depositing, having the vote weight updated, withdrawing and then
-    // voting.
-    require!(
-        voter.last_deposit_slot < Clock::get()?.slot,
-        ErrorCode::InvalidToDepositAndWithdrawInOneSlot
-    );
 
     // Get the deposit being withdrawn from.
     let curr_ts = registrar.clock_unix_timestamp();
@@ -122,6 +111,11 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
         ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
         amount,
     )?;
+
+    // Update the voter weight record
+    let record = &mut ctx.accounts.voter_weight_record;
+    record.voter_weight = voter.weight(&registrar)?;
+    record.voter_weight_expiry = Some(Clock::get()?.slot);
 
     Ok(())
 }

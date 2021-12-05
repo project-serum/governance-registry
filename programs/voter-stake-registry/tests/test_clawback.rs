@@ -128,9 +128,8 @@ async fn test_clawback() -> Result<(), TransportError> {
             10000,
         )
         .await
-        .expect_err("fails because a deposit happened in the same slot");
+        .expect_err("fails because nothing is vested");
 
-    // Must advance slots because withdrawing in the same slot as the deposit is forbidden
     // Advance almost three days for some vesting to kick in
     context
         .addin

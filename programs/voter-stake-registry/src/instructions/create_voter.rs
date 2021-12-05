@@ -5,8 +5,6 @@ use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
 use std::mem::size_of;
 
-pub const VOTER_WEIGHT_RECORD: [u8; 19] = *b"voter-weight-record";
-
 #[derive(Accounts)]
 #[instruction(voter_bump: u8, voter_weight_record_bump: u8)]
 pub struct CreateVoter<'info> {
@@ -40,7 +38,7 @@ pub struct CreateVoter<'info> {
     /// to prove how much vote weight the voter has. See update_voter_weight_record.
     #[account(
         init,
-        seeds = [VOTER_WEIGHT_RECORD.as_ref(), registrar.key().as_ref(), voter_authority.key().as_ref()],
+        seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter_authority.key().as_ref()],
         bump = voter_weight_record_bump,
         payer = payer,
         space = 150,

@@ -171,17 +171,12 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         .unwrap();
     deposit(1, 7000).await.unwrap();
 
-    withdraw(10000)
-        .await
-        .expect_err("deposit happened in the same slot");
-
     let after_deposit3 = get_balances(1).await;
     assert_eq!(initial.token, after_deposit3.token + after_deposit3.vault);
     assert_eq!(after_deposit3.voter_weight, after_deposit3.vault);
     assert_eq!(after_deposit3.vault, 22000);
     assert_eq!(after_deposit3.deposit, 7000);
 
-    // Withdraw works now because some slots were advanced (in get_balances())
     withdraw(10000).await.unwrap();
 
     let after_withdraw1 = get_balances(0).await;

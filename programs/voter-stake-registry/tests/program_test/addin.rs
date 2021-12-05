@@ -172,8 +172,8 @@ impl AddinCookie {
         );
         let (voter_weight_record, voter_weight_record_bump) = Pubkey::find_program_address(
             &[
-                b"voter-weight-record".as_ref(),
                 &registrar.address.to_bytes(),
+                b"voter-weight-record".as_ref(),
                 &authority.pubkey().to_bytes(),
             ],
             &self.program_id,
@@ -373,11 +373,11 @@ impl AddinCookie {
                 registrar: registrar.address,
                 voter: voter.address,
                 token_owner_record: token_owner_record.address,
+                voter_weight_record: voter.voter_weight_record,
                 vault: voting_mint.vault,
                 destination: token_address,
                 voter_authority: authority.pubkey(),
                 token_program: spl_token::id(),
-                instructions: solana_program::sysvar::instructions::id(),
             },
             None,
         );
