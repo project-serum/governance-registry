@@ -121,6 +121,11 @@ realm authority to:
 
 ## Special
 
+- [`Grant`](programs/voter-stake-registry/src/instructions/grant.rs)
+
+  As the realm authority or mint's grant authority: create a voter (if needed), create a
+  new deposit and fund it. This instruction is intended for use with DAO proposals.
+
 - [`Clawback`](programs/voter-stake-registry/src/instructions/clawback.rs)
 
   As the clawback authority, claim locked tokens from a voter's deposit entry that
