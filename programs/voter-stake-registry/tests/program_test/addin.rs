@@ -31,6 +31,7 @@ pub struct VoterCookie {
     pub address: Pubkey,
     pub authority: Pubkey,
     pub voter_weight_record: Pubkey,
+    pub token_owner_record: Pubkey,
 }
 
 impl AddinCookie {
@@ -189,7 +190,6 @@ impl AddinCookie {
             &voter_stake_registry::accounts::CreateVoter {
                 voter,
                 voter_weight_record,
-                token_owner_record: token_owner_record.address,
                 registrar: registrar.address,
                 voter_authority: authority.pubkey(),
                 payer: payer.pubkey(),
@@ -208,10 +208,9 @@ impl AddinCookie {
 
         // clone the secrets
         let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
-        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
 
         self.solana
-            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
+            .process_transaction(&instructions, Some(&[&signer1]))
             .await
             .unwrap();
 
@@ -219,6 +218,7 @@ impl AddinCookie {
             address: voter,
             authority: authority.pubkey(),
             voter_weight_record,
+            token_owner_record: token_owner_record.address,
         }
     }
 
@@ -313,7 +313,6 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         voting_mint: &VotingMintConfigCookie,
         clawback_authority: &Keypair,
         token_address: Pubkey,
@@ -328,7 +327,7 @@ impl AddinCookie {
             &voter_stake_registry::accounts::Clawback {
                 registrar: registrar.address,
                 voter: voter.address,
-                token_owner_record: token_owner_record.address,
+                token_owner_record: voter.token_owner_record,
                 vault: voting_mint.vault,
                 destination: token_address,
                 clawback_authority: clawback_authority.pubkey(),
@@ -355,7 +354,6 @@ impl AddinCookie {
         &self,
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         voting_mint: &VotingMintConfigCookie,
         authority: &Keypair,
         token_address: Pubkey,
@@ -372,7 +370,7 @@ impl AddinCookie {
             &voter_stake_registry::accounts::Withdraw {
                 registrar: registrar.address,
                 voter: voter.address,
-                token_owner_record: token_owner_record.address,
+                token_owner_record: voter.token_owner_record,
                 voter_weight_record: voter.voter_weight_record,
                 vault: voting_mint.vault,
                 destination: token_address,

@@ -120,7 +120,6 @@ async fn test_clawback() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,
@@ -143,7 +142,6 @@ async fn test_clawback() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,
@@ -158,7 +156,6 @@ async fn test_clawback() -> Result<(), TransportError> {
         .clawback(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             realm_authority_ata,
@@ -173,7 +170,6 @@ async fn test_clawback() -> Result<(), TransportError> {
         .clawback(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &realm_authority,
             realm_authority_ata,
@@ -187,7 +183,6 @@ async fn test_clawback() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             voter_authority_ata,

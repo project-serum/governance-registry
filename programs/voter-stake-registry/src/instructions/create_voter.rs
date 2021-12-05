@@ -18,21 +18,11 @@ pub struct CreateVoter<'info> {
         space = 8 + size_of::<Voter>(),
     )]
     pub voter: AccountLoader<'info, Voter>,
-    pub voter_authority: Signer<'info>,
 
-    /// The token_owner_record for the voter_authority.
-    ///
-    /// The instruction does not read it, but providing it here ensures that
-    /// users don't accidentally create voters and deposit funds without having
-    /// a valid token_owner_record. It is impossible to withdraw funds without
-    /// it.
-    ///
-    /// token_owner_record is validated in the instruction:
-    /// - owned by registrar.governance_program_id
-    /// - for the registrar.realm
-    /// - for the registrar.realm_governing_token_mint
-    /// - governing_token_owner is voter_authority
-    pub token_owner_record: UncheckedAccount<'info>,
+    /// The authority controling the voter. Must be the same as the
+    /// `governing_token_owner` in the token owner record used with
+    /// spl-governance.
+    pub voter_authority: UncheckedAccount<'info>,
 
     /// The voter weight record is the account that will be shown to spl-governance
     /// to prove how much vote weight the voter has. See update_voter_weight_record.
@@ -96,12 +86,6 @@ pub fn create_voter(
     voter_weight_record.realm = registrar.realm;
     voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
     voter_weight_record.governing_token_owner = voter_authority;
-
-    // Validate the token owner record.
-    voter.load_token_owner_record(
-        &ctx.accounts.token_owner_record.to_account_info(),
-        registrar,
-    )?;
 
     Ok(())
 }

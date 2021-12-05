@@ -96,7 +96,6 @@ async fn test_basic() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &&context.users[2].key,
             reference_account,
@@ -111,7 +110,6 @@ async fn test_basic() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             reference_account,

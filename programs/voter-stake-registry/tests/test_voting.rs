@@ -54,7 +54,6 @@ async fn test_voting() -> Result<(), TransportError> {
             context.mints[0].pubkey.unwrap(),
             &context.mints[0].authority,
             &voter,
-            &token_owner_record,
             &voter_authority,
             payer,
             addin.update_voter_weight_record_instruction(&registrar, &voter),
@@ -93,7 +92,6 @@ async fn test_voting() -> Result<(), TransportError> {
             mint_governance.address,
             &voter_authority,
             &voter,
-            &token_owner_record,
             payer,
             addin.update_voter_weight_record_instruction(&registrar, &voter),
         )
@@ -119,7 +117,6 @@ async fn test_voting() -> Result<(), TransportError> {
             mint_governance.address,
             &voter_authority,
             &voter,
-            &token_owner_record,
             payer,
             addin.update_voter_weight_record_instruction(&registrar, &voter),
         )
@@ -132,7 +129,6 @@ async fn test_voting() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             voter_mngo,
@@ -173,7 +169,6 @@ async fn test_voting() -> Result<(), TransportError> {
             mint_governance.address,
             &proposal,
             &voter2,
-            &token_owner_record2,
             &voter2_authority,
             payer,
             addin.update_voter_weight_record_instruction(&registrar, &voter2),
@@ -194,7 +189,6 @@ async fn test_voting() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter2,
-            &token_owner_record2,
             &mngo_voting_mint,
             &voter2_authority,
             voter_mngo,
@@ -208,7 +202,7 @@ async fn test_voting() -> Result<(), TransportError> {
         .relinquish_vote(
             mint_governance.address,
             &proposal,
-            &token_owner_record2,
+            voter2.token_owner_record,
             &voter2_authority,
             payer.pubkey(),
         )
@@ -220,7 +214,6 @@ async fn test_voting() -> Result<(), TransportError> {
         .withdraw(
             &registrar,
             &voter2,
-            &token_owner_record2,
             &mngo_voting_mint,
             &voter2_authority,
             voter_mngo,

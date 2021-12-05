@@ -40,7 +40,7 @@ pub struct MintGovernanceCookie {
 #[derive(Debug)]
 pub struct ProposalCookie {
     pub address: Pubkey,
-    pub owner_token_owner_record: TokenOwnerRecordCookie,
+    pub owner_token_owner_record: Pubkey,
 }
 
 impl GovernanceCookie {
@@ -143,7 +143,6 @@ impl GovernanceRealmCookie {
         &self,
         governed_account: Pubkey,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         authority: &Keypair,
         payer: &Keypair,
         vwr_instruction: Instruction,
@@ -160,7 +159,7 @@ impl GovernanceRealmCookie {
                 &self.governance.program_id,
                 &self.realm,
                 &governed_account,
-                &token_owner_record.address,
+                &voter.token_owner_record,
                 &payer.pubkey(),
                 &authority.pubkey(),
                 Some(voter.voter_weight_record),
@@ -198,7 +197,6 @@ impl GovernanceRealmCookie {
         governed_mint: Pubkey,
         governed_mint_authority: &Keypair,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         authority: &Keypair,
         payer: &Keypair,
         vwr_instruction: Instruction,
@@ -216,7 +214,7 @@ impl GovernanceRealmCookie {
                 &self.realm,
                 &governed_mint,
                 &governed_mint_authority.pubkey(),
-                &token_owner_record.address,
+                &voter.token_owner_record,
                 &payer.pubkey(),
                 &authority.pubkey(),
                 Some(voter.voter_weight_record),
@@ -256,7 +254,6 @@ impl GovernanceRealmCookie {
         governance: Pubkey,
         authority: &Keypair,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         payer: &Keypair,
         vwr_instruction: Instruction,
     ) -> std::result::Result<ProposalCookie, TransportError> {
@@ -272,7 +269,7 @@ impl GovernanceRealmCookie {
             spl_governance::instruction::create_proposal(
                 &self.governance.program_id,
                 &governance,
-                &token_owner_record.address,
+                &voter.token_owner_record,
                 &authority.pubkey(),
                 &payer.pubkey(),
                 Some(voter.voter_weight_record),
@@ -285,7 +282,7 @@ impl GovernanceRealmCookie {
             spl_governance::instruction::add_signatory(
                 &self.governance.program_id,
                 &proposal,
-                &token_owner_record.address,
+                &voter.token_owner_record,
                 &authority.pubkey(),
                 &payer.pubkey(),
                 &authority.pubkey(),
@@ -307,7 +304,7 @@ impl GovernanceRealmCookie {
 
         Ok(ProposalCookie {
             address: proposal,
-            owner_token_owner_record: token_owner_record.clone(),
+            owner_token_owner_record: voter.token_owner_record,
         })
     }
 
@@ -317,7 +314,6 @@ impl GovernanceRealmCookie {
         governance: Pubkey,
         proposal: &ProposalCookie,
         voter: &VoterCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
         authority: &Keypair,
         payer: &Keypair,
         vwr_instruction: Instruction,
@@ -329,8 +325,8 @@ impl GovernanceRealmCookie {
                 &self.realm,
                 &governance,
                 &proposal.address,
-                &proposal.owner_token_owner_record.address,
-                &token_owner_record.address,
+                &proposal.owner_token_owner_record,
+                &voter.token_owner_record,
                 &authority.pubkey(),
                 &self.community_token_mint.pubkey.unwrap(),
                 &payer.pubkey(),
@@ -353,7 +349,7 @@ impl GovernanceRealmCookie {
         &self,
         governance: Pubkey,
         proposal: &ProposalCookie,
-        token_owner_record: &TokenOwnerRecordCookie,
+        token_owner_record: Pubkey,
         authority: &Keypair,
         beneficiary: Pubkey,
     ) -> std::result::Result<(), TransportError> {
@@ -361,7 +357,7 @@ impl GovernanceRealmCookie {
             &self.governance.program_id,
             &governance,
             &proposal.address,
-            &token_owner_record.address,
+            &token_owner_record,
             &self.community_token_mint.pubkey.unwrap(),
             Some(authority.pubkey()),
             Some(beneficiary),

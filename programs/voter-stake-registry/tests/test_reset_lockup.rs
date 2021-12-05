@@ -69,7 +69,6 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
         addin.withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             reference_account,

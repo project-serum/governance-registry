@@ -100,7 +100,6 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
         addin.withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             reference_account,

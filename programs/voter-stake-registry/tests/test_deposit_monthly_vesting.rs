@@ -90,7 +90,6 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
         addin.withdraw(
             &registrar,
             &voter,
-            &token_owner_record,
             &mngo_voting_mint,
             &voter_authority,
             reference_account,
