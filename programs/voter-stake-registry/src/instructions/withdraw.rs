@@ -62,6 +62,16 @@ impl<'info> Withdraw<'info> {
 /// `amount` is in units of the native currency being withdrawn.
 pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------withdraw--------");
+
+    // Forbid voting with already withdraw tokens
+    // e.g. flow
+    // - update voter_weight_record
+    // - withdraw
+    // - vote
+    let ixns = ctx.accounts.instructions.to_account_info();
+    let current_index = tx_instructions::load_current_index_checked(&ixns)? as usize;
+    require!(current_index == 0, ErrorCode::ShouldBeTheFirstIxInATx);
+
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
