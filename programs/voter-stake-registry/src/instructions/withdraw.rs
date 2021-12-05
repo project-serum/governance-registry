@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use anchor_spl::token::{self, Token, TokenAccount};
 
 #[derive(Accounts)]
@@ -41,6 +42,9 @@ pub struct Withdraw<'info> {
     pub destination: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
+
+    #[account(address = tx_instructions::ID)]
+    pub instructions: UncheckedAccount<'info>,
 }
 
 impl<'info> Withdraw<'info> {

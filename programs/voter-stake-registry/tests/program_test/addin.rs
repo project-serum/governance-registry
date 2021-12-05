@@ -377,6 +377,7 @@ impl AddinCookie {
                 destination: token_address,
                 voter_authority: authority.pubkey(),
                 token_program: spl_token::id(),
+                instructions: solana_program::sysvar::instructions::id(),
             },
             None,
         );
