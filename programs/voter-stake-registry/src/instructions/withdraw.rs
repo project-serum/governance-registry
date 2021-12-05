@@ -85,14 +85,6 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
     )?;
     token_owner_record.assert_can_withdraw_governing_tokens()?;
 
-    // Must not withdraw in the same slot as depositing, to prevent people
-    // depositing, having the vote weight updated, withdrawing and then
-    // voting.
-    require!(
-        voter.last_deposit_slot < Clock::get()?.slot,
-        ErrorCode::InvalidToDepositAndWithdrawInOneSlot
-    );
-
     // Get the deposit being withdrawn from.
     let curr_ts = registrar.clock_unix_timestamp();
     let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
