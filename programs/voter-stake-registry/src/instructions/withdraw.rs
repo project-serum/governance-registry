@@ -63,7 +63,7 @@ impl<'info> Withdraw<'info> {
 pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     msg!("--------withdraw--------");
 
-    // Forbid voting with already withdraw tokens
+    // Forbid voting with already withdrawn tokens
     // e.g. flow
     // - update voter_weight_record
     // - withdraw
