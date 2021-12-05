@@ -5,6 +5,7 @@ use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transport::
 
 mod program_test;
 
+#[derive(PartialEq, Debug)]
 struct Balances {
     token: u64,
     vault: u64,
@@ -187,6 +188,14 @@ async fn test_deposit_daily_vesting() -> Result<(), TransportError> {
     assert_eq!(after_withdraw.voter_weight, after_withdraw.vault);
     assert_eq!(after_withdraw.vault, 6500);
     assert_eq!(after_withdraw.deposit, 6500);
+
+    // check that creating the voter again has no effect on balances
+    addin
+        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
+        .await;
+
+    let after_recreate = get_balances(0).await;
+    assert_eq!(after_withdraw, after_recreate);
 
     // advance another day
     addin
