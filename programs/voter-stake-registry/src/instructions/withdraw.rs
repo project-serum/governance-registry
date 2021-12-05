@@ -112,6 +112,15 @@ pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) ->
         amount,
     )?;
 
+    msg!(
+        "Withdrew amount {} at deposit index {} with lockup kind {:?}, and start ts {}, end ts {}",
+        amount,
+        deposit_entry_index,
+        deposit_entry.lockup.kind,
+        deposit_entry.lockup.start_ts,
+        deposit_entry.lockup.end_ts,
+    );
+
     // Update the voter weight record
     let record = &mut ctx.accounts.voter_weight_record;
     record.voter_weight = voter.weight(&registrar)?;

@@ -102,5 +102,14 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
     d_entry.amount_deposited_native += amount;
     d_entry.amount_initially_locked_native += amount;
 
+    msg!(
+        "Deposited amount {} at deposit index {} with lockup kind {:?}, and start ts {}, end ts {}",
+        amount,
+        deposit_entry_index,
+        d_entry.lockup.kind,
+        d_entry.lockup.start_ts,
+        d_entry.lockup.end_ts,
+    );
+
     Ok(())
 }

@@ -147,5 +147,14 @@ pub fn grant(
     d_entry.amount_deposited_native = amount;
     d_entry.amount_initially_locked_native = amount;
 
+    msg!(
+        "Granted amount {} at deposit index {} with lockup kind {:?}, and start ts {}, end ts {}",
+        amount,
+        free_entry_idx,
+        d_entry.lockup.kind,
+        d_entry.lockup.start_ts,
+        d_entry.lockup.end_ts,
+    );
+
     Ok(())
 }
