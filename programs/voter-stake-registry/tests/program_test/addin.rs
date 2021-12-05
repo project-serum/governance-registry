@@ -105,6 +105,7 @@ impl AddinCookie {
         index: u16,
         mint: &MintCookie,
         rate: u64,
+        grant_authority: Option<Pubkey>,
     ) -> VotingMintConfigCookie {
         let deposit_mint = mint.pubkey.unwrap();
         let vault = spl_associated_token_account::get_associated_token_address(
@@ -117,6 +118,7 @@ impl AddinCookie {
                 idx: index,
                 rate,
                 decimals: mint.decimals,
+                grant_authority,
             },
         );
 
@@ -266,6 +268,7 @@ impl AddinCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn deposit(
         &self,
         registrar: &RegistrarCookie,
@@ -306,6 +309,82 @@ impl AddinCookie {
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
             .await
+    }
+
+    #[allow(dead_code)]
+    pub async fn grant(
+        &self,
+        registrar: &RegistrarCookie,
+        voter_authority: Pubkey,
+        voting_mint: &VotingMintConfigCookie,
+        lockup_kind: voter_stake_registry::state::LockupKind,
+        periods: u32,
+        allow_clawback: bool,
+        amount: u64,
+        deposit_token: Pubkey,
+        authority: &Keypair,
+    ) -> std::result::Result<VoterCookie, TransportError> {
+        let (voter, voter_bump) = Pubkey::find_program_address(
+            &[
+                &registrar.address.to_bytes(),
+                b"voter".as_ref(),
+                &voter_authority.to_bytes(),
+            ],
+            &self.program_id,
+        );
+        let (voter_weight_record, voter_weight_record_bump) = Pubkey::find_program_address(
+            &[
+                &registrar.address.to_bytes(),
+                b"voter-weight-record".as_ref(),
+                &voter_authority.to_bytes(),
+            ],
+            &self.program_id,
+        );
+
+        let data = anchor_lang::InstructionData::data(&voter_stake_registry::instruction::Grant {
+            voter_bump,
+            voter_weight_record_bump,
+            kind: lockup_kind,
+            periods,
+            allow_clawback,
+            amount,
+        });
+
+        let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+            &voter_stake_registry::accounts::Grant {
+                registrar: registrar.address,
+                voter,
+                voter_authority,
+                voter_weight_record,
+                vault: voting_mint.vault,
+                deposit_token,
+                authority: authority.pubkey(),
+                system_program: solana_sdk::system_program::id(),
+                token_program: spl_token::id(),
+                rent: solana_program::sysvar::rent::id(),
+            },
+            None,
+        );
+
+        let instructions = vec![Instruction {
+            program_id: self.program_id,
+            accounts,
+            data,
+        }];
+
+        // clone the secrets
+        let signer1 = Keypair::from_base58_string(&authority.to_base58_string());
+
+        self.solana
+            .process_transaction(&instructions, Some(&[&signer1]))
+            .await?;
+
+        Ok(VoterCookie {
+            address: voter,
+            authority: voter_authority,
+            voter_weight_record,
+            token_owner_record: Pubkey::new_unique(), // don't have it
+        })
     }
 
     #[allow(dead_code)]
@@ -350,6 +429,7 @@ impl AddinCookie {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn withdraw(
         &self,
         registrar: &RegistrarCookie,
