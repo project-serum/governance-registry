@@ -63,7 +63,8 @@ impl TestContext {
             addin_program_id,
             processor!(voter_stake_registry::entry),
         );
-        test.set_bpf_compute_max_units(200000);
+        // intentionally set to half the limit, to catch potential problems early
+        test.set_bpf_compute_max_units(100000);
 
         let governance_program_id =
             Pubkey::from_str(&"GovernanceProgram11111111111111111111111111").unwrap();
