@@ -2,11 +2,14 @@ use crate::error::*;
 use crate::state::lockup::{Lockup, LockupKind};
 use crate::state::voting_mint_config::VotingMintConfig;
 use anchor_lang::prelude::*;
+use std::convert::TryFrom;
 
 /// Vote weight is amount * FIXED_VOTE_WEIGHT_FACTOR +
 /// LOCKING_VOTE_WEIGHT_FACTOR * amount * time / max time
 pub const FIXED_VOTE_WEIGHT_FACTOR: u64 = 1;
 pub const LOCKING_VOTE_WEIGHT_FACTOR: u64 = 0;
+
+pub const MAX_SECS_LOCKED: u64 = 7 * 365 * 24 * 60 * 60;
 
 /// Bookkeeping for a single deposit for a given mint and lockup schedule.
 #[zero_copy]
@@ -81,62 +84,11 @@ impl DepositEntry {
     /// each point in time the lockup should be equivalent to a new lockup
     /// made for the remaining time period.
     ///
-    /// ## Daily Vesting Lockup
+    /// ## Linear Vesting Lockup
     ///
-    /// Daily vesting can be calculated with simple series sum.
+    /// Daily/monthly linear vesting can be calculated with series sum, see
+    /// voting_power_linear_vesting() below.
     ///
-    /// For the sake of example, suppose we locked up 10 tokens for two days,
-    /// vesting linearly once a day. In other words, we have 5 tokens locked for
-    /// 1 day and 5 tokens locked for two days.
-    ///
-    /// Visually, we can see this in a two year timeline
-    ///
-    /// 0      5      10   amount unlocked
-    /// | ---- | ---- |
-    /// 0      1      2   days
-    ///
-    /// Then, to calculate the voting power at any time in the first day, we
-    /// have (for a max_lockup_time of 2555 days)
-    ///
-    /// ```
-    /// voting_power =
-    ///     5 * (fixed_factor + locking_factor * 1/2555)
-    ///     + 5 * (fixed_factor + locking_factor * 2/2555)
-    ///   = 10 * fixed_factor
-    ///     + 5 * locking_factor * (1 + 2)/2555
-    /// ```
-    ///
-    /// Since 7 years is the maximum lock, and 1 day is the minimum, we have
-    /// a time_factor of 1/2555 for a one day lock, 2/2555 for a two day lock,
-    /// 2555/2555 for a 7 year lock, and 0 for no lock.
-    ///
-    /// Let's now generalize this to a daily vesting schedule over N days.
-    /// Let "amount" be the total amount for vesting. Then the total voting
-    /// power to start is
-    ///
-    /// ```
-    /// voting_power =
-    ///   = amount * fixed_factor
-    ///     + amount/N * locking_factor * (1 + 2 + ... + N)/2555
-    /// ```
-    ///
-    /// ### Decay
-    ///
-    /// With every vesting one of the summands in the time term disappears
-    /// and the remaining locking time for others decreases. That means after
-    /// m days, the remaining voting power is
-    ///
-    /// ```
-    /// voting_power =
-    ///   = amount * fixed_factor
-    ///     + amount/N * locking_factor * (1 + 2 + ... + (N - m))/2555
-    /// ```
-    ///
-    /// Example: After N-1 days, only a 1/Nth fraction of the initial amount
-    /// is still locked up and the rest has vested. And that amount has
-    /// a time factor of 1/2555.
-    ///
-    /// The computation below uses 1 + 2 + ... + n = n * (n + 1) / 2.
     pub fn voting_power(&self, voting_mint_config: &VotingMintConfig, curr_ts: i64) -> Result<u64> {
         let fixed_contribution = voting_mint_config
             .convert(self.amount_deposited_native)
@@ -158,7 +110,7 @@ impl DepositEntry {
     /// Vote contribution from locked funds only, not scaled by
     /// LOCKING_VOTE_WEIGHT_FACTOR yet.
     pub fn voting_power_locked(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
-        if curr_ts < self.lockup.start_ts || curr_ts >= self.lockup.end_ts {
+        if curr_ts >= self.lockup.end_ts {
             return Ok(0);
         }
         match self.lockup.kind {
@@ -170,51 +122,82 @@ impl DepositEntry {
     }
 
     fn voting_power_linear_vesting(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
-        let max_periods = self.lockup.kind.max_periods();
         let periods_left = self.lockup.periods_left(curr_ts)?;
         let periods_total = self.lockup.periods_total()?;
+        let period_secs = self.lockup.kind.period_secs() as u64;
 
         if periods_left == 0 {
             return Ok(0);
         }
 
-        // TODO: Switch the decay interval to be seconds, not days. That means each
-        // of the period cliff-locked deposits here will decay in vote power over the
-        // period. That complicates the computaton here, but makes it easier to do
-        // the right thing if the period_secs() aren't a multiple of a day.
+        // This computes the voting power by considering the linear vesting as a
+        // sequence of vesting cliffs.
         //
-        // This computes
-        // amount / periods_total * (1 + 2 + ... + periods_left) / max_periods
-        // See the comment on voting_power().
-        let decayed_vote_weight = max_contribution
-            .checked_mul(
-                // Ok to divide by two here because, if n is zero, then the
-                // voting power is zero. And if n is one or above, then the
-                // numerator is 2 or above.
-                periods_left
-                    .checked_mul(periods_left.checked_add(1).unwrap())
-                    .unwrap()
-                    .checked_div(2)
-                    .unwrap(),
-            )
-            .unwrap()
-            .checked_div(max_periods.checked_mul(periods_total).unwrap())
-            .unwrap();
+        // For example, if there were 5 vesting periods, with 3 of them left
+        // (i.e. two have already vested and their tokens are no longer locked)
+        // we'd have (max_contribution / 5) weight in each of them, and the
+        // voting weight would be:
+        //    (max_contribution/5) * secs_left_for_cliff_1 / MAX_SECS_LOCKED
+        //  + (max_contribution/5) * secs_left_for_cliff_2 / MAX_SECS_LOCKED
+        //  + (max_contribution/5) * secs_left_for_cliff_3 / MAX_SECS_LOCKED
+        //
+        // Or more simply:
+        //    (max_contribution/5) / MAX_SECS_LOCKED * \sum_p secs_left_for_cliff_p
+        //
+        // The value secs_left_for_cliff_p splits up as
+        //    secs_left_for_cliff_p = secs_to_closest_cliff + (p-1) * period_secs
+        //
+        // So
+        //    lockup_secs := \sum_p secs_left_for_cliff_p
+        //                 = periods_left * secs_to_closest_cliff
+        //                   + period_secs * \sum_0^periods_left (p-1)
+        //
+        // Where the sum of full periods has a formula:
+        //
+        //    sum_full_periods := \sum_0^periods_left (p-1)
+        //                      = periods_left * (periods_left - 1) / 2
+        //
 
-        Ok(decayed_vote_weight)
+        let denominator = MAX_SECS_LOCKED * periods_total;
+
+        // Sum of the full periods left for all remaining vesting cliffs.
+        //
+        // Examples:
+        // - if there are 3 periods left, meaning three vesting cliffs in the future:
+        //   one has only a fractional period left and contributes 0
+        //   the next has one full period left
+        //   and the next has two full periods left
+        //   so sums to 3 = 3 * 2 / 2
+        // - if there's only one period left, the sum is 0
+        let sum_full_periods = periods_left * (periods_left - 1) / 2;
+
+        let secs_to_closest_cliff =
+            u64::try_from(self.lockup.end_ts - (period_secs * (periods_left - 1)) as i64 - curr_ts)
+                .unwrap();
+
+        // Total number of seconds left over all periods_left remaining vesting cliffs
+        let lockup_secs = periods_left * secs_to_closest_cliff + sum_full_periods * period_secs;
+
+        Ok(u64::try_from(
+            (max_contribution as u128)
+                .checked_mul(lockup_secs as u128)
+                .unwrap()
+                .checked_div(denominator as u128)
+                .unwrap(),
+        )
+        .unwrap())
     }
 
     fn voting_power_cliff(&self, curr_ts: i64, max_contribution: u64) -> Result<u64> {
-        // TODO: Decay by the second, not by the day.
-        let decayed_voting_weight = self
-            .lockup
-            .periods_left(curr_ts)?
-            .checked_mul(max_contribution)
-            .unwrap()
-            .checked_div(self.lockup.kind.max_periods())
-            .unwrap();
-
-        Ok(decayed_voting_weight)
+        let remaining = self.lockup.seconds_left(curr_ts);
+        Ok(u64::try_from(
+            (max_contribution as u128)
+                .checked_mul(remaining as u128)
+                .unwrap()
+                .checked_div(MAX_SECS_LOCKED as u128)
+                .unwrap(),
+        )
+        .unwrap())
     }
 
     /// Returns the amount of unlocked tokens for this deposit--in native units

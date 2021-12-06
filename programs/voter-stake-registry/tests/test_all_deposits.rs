@@ -50,17 +50,6 @@ async fn test_all_deposits() -> Result<(), TransportError> {
         .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
         .await;
 
-    let mint_governance = realm
-        .create_mint_governance(
-            context.mints[0].pubkey.unwrap(),
-            &context.mints[0].authority,
-            &voter,
-            &voter_authority,
-            payer,
-            addin.update_voter_weight_record_instruction(&registrar, &voter),
-        )
-        .await;
-
     for i in 0..32 {
         addin
             .create_deposit_entry(
