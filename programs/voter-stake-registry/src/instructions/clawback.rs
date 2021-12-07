@@ -64,7 +64,6 @@ impl<'info> Clawback<'info> {
 /// The instruction will always reclaim all locked tokens, while leaving tokens
 /// that have already vested in place.
 pub fn clawback(ctx: Context<Clawback>, deposit_entry_index: u8) -> Result<()> {
-    msg!("--------clawback--------");
     // Load the accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;

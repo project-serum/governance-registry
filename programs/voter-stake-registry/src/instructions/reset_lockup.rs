@@ -25,7 +25,6 @@ pub fn reset_lockup(
     deposit_entry_index: u8,
     periods: u32,
 ) -> Result<()> {
-    msg!("--------reset_lockup--------");
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
     let d = voter.active_deposit_mut(deposit_entry_index)?;

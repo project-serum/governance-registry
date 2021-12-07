@@ -34,7 +34,6 @@ pub struct UpdateVoterWeightRecord<'info> {
 /// This "revise" instruction must be called immediately before voting, in
 /// the same transaction.
 pub fn update_voter_weight_record(ctx: Context<UpdateVoterWeightRecord>) -> Result<()> {
-    msg!("--------update_voter_weight_record--------");
     let registrar = &ctx.accounts.registrar;
     let voter = ctx.accounts.voter.load()?;
     let record = &mut ctx.accounts.voter_weight_record;

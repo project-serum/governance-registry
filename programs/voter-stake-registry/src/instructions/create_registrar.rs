@@ -56,7 +56,6 @@ pub fn create_registrar(
     vote_weight_decimals: u8,
     registrar_bump: u8,
 ) -> Result<()> {
-    msg!("--------create_registrar--------");
     let registrar = &mut ctx.accounts.registrar;
     registrar.bump = registrar_bump;
     registrar.governance_program_id = ctx.accounts.governance_program_id.key();

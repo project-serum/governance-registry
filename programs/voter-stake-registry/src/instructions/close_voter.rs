@@ -20,7 +20,6 @@ pub struct CloseVoter<'info> {
 /// Closes the voter account, allowing one to retrieve rent exemption SOL.
 /// Only accounts with no remaining deposits can be closed.
 pub fn close_voter(ctx: Context<CloseVoter>) -> Result<()> {
-    msg!("--------close_voter--------");
     let voter = &ctx.accounts.voter.load()?;
     let amount = voter.deposits.iter().fold(0u64, |sum, d| {
         sum.checked_add(d.amount_deposited_native).unwrap()

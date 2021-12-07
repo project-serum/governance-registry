@@ -20,7 +20,6 @@ pub struct UpdateMaxVoteWeight<'info> {
 /// all tokens fits into a u64 *after* converting into common decimals, as
 /// defined by the registrar's `rate_decimal` field.
 pub fn update_max_vote_weight<'info>(ctx: Context<UpdateMaxVoteWeight>) -> Result<()> {
-    msg!("--------update_max_vote_weight--------");
     let registrar = &ctx.accounts.registrar;
     let _max_vote_weight = {
         let total: Result<u64> = ctx

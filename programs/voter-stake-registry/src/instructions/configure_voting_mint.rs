@@ -50,7 +50,6 @@ pub fn configure_voting_mint(
     decimals: u8,
     grant_authority: Option<Pubkey>,
 ) -> Result<()> {
-    msg!("--------configure_voting_mint--------");
     require!(rate > 0, InvalidRate);
     let registrar = &mut ctx.accounts.registrar;
     require!(

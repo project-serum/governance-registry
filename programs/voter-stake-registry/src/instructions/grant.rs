@@ -88,8 +88,6 @@ pub fn grant(
     allow_clawback: bool,
     amount: u64,
 ) -> Result<()> {
-    msg!("--------grant--------");
-
     // Load accounts.
     let registrar = &ctx.accounts.registrar;
     let voter_authority = ctx.accounts.voter_authority.key();

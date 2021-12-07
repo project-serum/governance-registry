@@ -64,7 +64,6 @@ pub fn create_voter(
     voter_bump: u8,
     voter_weight_record_bump: u8,
 ) -> Result<()> {
-    msg!("--------create_voter--------");
     // Forbid creating voter accounts from CPI. The goal is to make automation
     // impossible that weakens some of the limitations intentionally imposed on
     // locked tokens.

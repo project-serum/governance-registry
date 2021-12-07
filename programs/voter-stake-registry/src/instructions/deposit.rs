@@ -55,7 +55,6 @@ impl<'info> Deposit<'info> {
 /// `deposit_entry_index`: Index of the deposit entry.
 /// `amount`: Number of native tokens to transfer.
 pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {
-    msg!("--------update_deposit--------");
     if amount == 0 {
         return Ok(());
     }

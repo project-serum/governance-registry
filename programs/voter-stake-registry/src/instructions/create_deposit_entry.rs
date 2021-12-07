@@ -38,7 +38,6 @@ pub fn create_deposit_entry(
     periods: u32,
     allow_clawback: bool,
 ) -> Result<()> {
-    msg!("--------create_deposit_entry--------");
     // Load accounts.
     let registrar = &ctx.accounts.registrar;
     let voter = &mut ctx.accounts.voter.load_mut()?;
