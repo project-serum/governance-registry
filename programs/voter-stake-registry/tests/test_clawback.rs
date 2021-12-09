@@ -49,7 +49,10 @@ async fn test_clawback() -> Result<(), TransportError> {
             realm_authority,
             0,
             community_token_mint,
-            1,
+            0,
+            1.0,
+            0.0,
+            5 * 365 * 24 * 60 * 60,
             None,
         )
         .await;

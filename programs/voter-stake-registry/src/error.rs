@@ -54,4 +54,8 @@ pub enum ErrorCode {
     InvalidTokenOwnerRecord,
     #[msg("")]
     InvalidRealmAuthority,
+    #[msg("")]
+    VoterWeightOverflow,
+    #[msg("")]
+    LockupSaturationMustBePositive,
 }

@@ -80,7 +80,10 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             payer,
             0,
             &context.mints[0],
-            1,
+            0,
+            1.0,
+            10.0, // no locking, so has no effect
+            5 * 365 * 24 * 60 * 60,
             None,
         )
         .await;
