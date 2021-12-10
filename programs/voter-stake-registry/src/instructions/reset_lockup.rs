@@ -4,9 +4,10 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct ResetLockup<'info> {
+    pub registrar: AccountLoader<'info, Registrar>,
+
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive
-    pub registrar: AccountLoader<'info, Registrar>,
     #[account(
         mut,
         seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
@@ -23,23 +24,33 @@ pub struct ResetLockup<'info> {
 pub fn reset_lockup(
     ctx: Context<ResetLockup>,
     deposit_entry_index: u8,
+    kind: LockupKind,
     periods: u32,
 ) -> Result<()> {
     let registrar = &ctx.accounts.registrar.load()?;
     let voter = &mut ctx.accounts.voter.load_mut()?;
-    let d = voter.active_deposit_mut(deposit_entry_index)?;
-
-    // The lockup period can only be increased.
     let curr_ts = registrar.clock_unix_timestamp();
-    require!(
-        periods as u64 >= d.lockup.periods_left(curr_ts)?,
-        InvalidDays
-    );
-    require!(periods > 0, InvalidDays);
 
-    // Lock up every deposited token again
-    d.amount_initially_locked_native = d.amount_deposited_native;
-    d.lockup = Lockup::new_from_periods(d.lockup.kind, curr_ts, periods)?;
+    let source = voter.active_deposit_mut(deposit_entry_index)?;
+
+    // Must not decrease duration or strictness
+    require!(
+        (periods as u64).checked_mul(kind.period_secs()).unwrap()
+            >= source.lockup.seconds_left(curr_ts),
+        InvalidLockupPeriod
+    );
+    require!(
+        kind.strictness() >= source.lockup.kind.strictness(),
+        InvalidLockupKind
+    );
+
+    // Don't re-lock clawback deposits. Users must withdraw and create a new one.
+    require!(!source.allow_clawback, InvalidChangeToClawbackDepositEntry);
+
+    // Change the deposit entry.
+    let d_entry = voter.active_deposit_mut(deposit_entry_index)?;
+    d_entry.amount_initially_locked_native = d_entry.amount_deposited_native;
+    d_entry.lockup = Lockup::new_from_periods(kind, curr_ts, periods)?;
 
     Ok(())
 }
