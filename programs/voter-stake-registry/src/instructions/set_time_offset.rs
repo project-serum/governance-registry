@@ -13,7 +13,7 @@ pub struct SetTimeOffset<'info> {
 
 /// A debug-only instruction that advances the time.
 pub fn set_time_offset(ctx: Context<SetTimeOffset>, time_offset: i64) -> Result<()> {
-    let allowed_program = Pubkey::from_str("GovernanceProgram11111111111111111111111111").unwrap();
+    let allowed_program = Pubkey::from_str("GovernanceProgramTest1111111111111111111111").unwrap();
     let registrar = &mut ctx.accounts.registrar.load_mut()?;
     require!(
         registrar.governance_program_id == allowed_program,
