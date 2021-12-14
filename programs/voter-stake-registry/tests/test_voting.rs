@@ -189,10 +189,10 @@ async fn test_voting() -> Result<(), TransportError> {
 
     let proposal_data = context.solana.get_account_data(proposal.address).await;
     let mut data_slice: &[u8] = &proposal_data;
-    let proposal_state: spl_governance::state::proposal::Proposal =
+    let proposal_state: spl_governance::state::proposal::ProposalV2 =
         anchor_lang::AnchorDeserialize::deserialize(&mut data_slice).unwrap();
-    assert_eq!(proposal_state.yes_votes_count, 2 * 750);
-    assert_eq!(proposal_state.no_votes_count, 0);
+    assert_eq!(proposal_state.options[0].vote_weight, 2 * 750);
+    assert_eq!(proposal_state.deny_vote_weight.unwrap(), 0);
 
     // having voted, the funds are now locked, withdrawing is impossible
     context.solana.advance_clock_by_slots(2).await; // avoid cache when sending same transaction again

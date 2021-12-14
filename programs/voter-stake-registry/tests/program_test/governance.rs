@@ -3,6 +3,7 @@ use std::sync::Arc;
 use solana_program::instruction::Instruction;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
+use spl_governance::state::{proposal, vote_record};
 
 use crate::*;
 
@@ -277,6 +278,9 @@ impl GovernanceRealmCookie {
                 "test proposal".into(),
                 "description".into(),
                 &self.community_token_mint.pubkey.unwrap(),
+                proposal::VoteType::SingleChoice,
+                vec!["yes".into()],
+                true,
                 0,
             ),
             spl_governance::instruction::add_signatory(
@@ -331,7 +335,10 @@ impl GovernanceRealmCookie {
                 &self.community_token_mint.pubkey.unwrap(),
                 &payer.pubkey(),
                 Some(voter.voter_weight_record),
-                spl_governance::instruction::Vote::Yes,
+                vote_record::Vote::Approve(vec![vote_record::VoteChoice {
+                    rank: 0,
+                    weight_percentage: 100,
+                }]),
             ),
         ];
 

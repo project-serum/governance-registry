@@ -25,7 +25,7 @@ anchor-spl = { git = "https://github.com/microwavedcola1/anchor.git", branch = "
 
 # The rev used for spl-governance must match what the fixture binary
 # programs/voter-stake-registry/tests/fixtures/spl_governance.so is built from.
-spl-governance = { git = "https://github.com/solana-labs/solana-program-library", rev = "75ddd9bb229396427977fb679a0763630e83bce6", features = ["no-entrypoint"] }
+spl-governance = { git = "https://github.com/solana-labs/solana-program-library", rev = "1a0155e34bf96489db2cd498be79ca417c87c09f", features = ["no-entrypoint"] }
 solana-program = "^1.8.1"
 static_assertions = "1.1"
 
