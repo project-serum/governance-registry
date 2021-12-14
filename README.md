@@ -1,6 +1,6 @@
 # Development
 
-* Built and developed using rust stable (rustc 1.57.0 (f1edd0429 2021-11-29))
+* Built and developed using `rust stable`:`rustc 1.57.0 (f1edd0429 2021-11-29)`
 * Run rust based tests so - `cargo test-bpf`
 
 # Description
