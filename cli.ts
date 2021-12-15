@@ -7,21 +7,18 @@ async function main() {
   const clusterUrl = "https://api.devnet.solana.com";
   const throwAway = new anchor.web3.Keypair();
 
-  const connection = new anchor.web3.Connection(clusterUrl);
+  const connection = new anchor.web3.Connection(clusterUrl, "confirmed");
 
   const walletWrapper = new anchor.Wallet(throwAway);
 
   const provider = new anchor.Provider(connection, walletWrapper, {
-    preflightCommitment: "processed",
+    preflightCommitment: "confirmed",
   });
 
   const idl = await anchor.Program.fetchIdl(programId, provider);
 
   const program = new anchor.Program(idl, programId, provider);
-
   console.log("program id from anchor", program.programId.toBase58());
-
-  return program;
 }
 
 main();
