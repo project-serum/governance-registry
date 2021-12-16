@@ -38,7 +38,7 @@ pub struct Grant<'info> {
         seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter_authority.key().as_ref()],
         bump = voter_weight_record_bump,
         payer = payer,
-        space = 150,
+        space = size_of::<VoterWeightRecord>(),
     )]
     pub voter_weight_record: Account<'info, VoterWeightRecord>,
 
