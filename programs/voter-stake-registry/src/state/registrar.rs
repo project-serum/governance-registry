@@ -12,15 +12,17 @@ pub struct Registrar {
     pub realm_governing_token_mint: Pubkey,
     pub realm_authority: Pubkey,
     pub clawback_authority: Pubkey,
-    // The length should be adjusted for one's use case.
-    pub voting_mints: [VotingMintConfig; 2],
+
+    /// Storage for voting mints and their configuration.
+    /// The length should be adjusted for one's use case.
+    pub voting_mints: [VotingMintConfig; 4],
 
     /// Debug only: time offset, to allow tests to move forward in time.
     pub time_offset: i64,
     pub bump: u8,
     pub padding: [u8; 31],
 }
-const_assert!(std::mem::size_of::<Registrar>() == 5 * 32 + 2 * 120 + 8 + 1 + 31);
+const_assert!(std::mem::size_of::<Registrar>() == 5 * 32 + 4 * 120 + 8 + 1 + 31);
 
 impl Registrar {
     pub fn clock_unix_timestamp(&self) -> i64 {

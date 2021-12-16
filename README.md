@@ -1,8 +1,3 @@
-# Development
-
-* Built and developed using - rust stable(`rustc 1.57.0 (f1edd0429 2021-11-29)`)
-* Run rust based tests - `cargo test-bpf`
-
 # Description
 
 Voter-stake-registry is a voter weight addin for Solana's
@@ -35,6 +30,17 @@ Users can:
 
 - Use their voting weight to vote on spl-governance proposals.
 
+# Development
+
+* Built and developed using - rust stable(`rustc 1.57.0 (f1edd0429 2021-11-29)`)
+* Run rust based tests - `cargo test-bpf`
+
+# Deployment
+
+Users will likely want to compile their own voter-stake-registry and deploy it to an address they control.
+
+Before compiling, look at:
+- `Registrar::voting_mints`: The length of this array defines the number of configurable voting mints. Adjust as needed.
 
 # Usage Scenarios
 
