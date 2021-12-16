@@ -83,7 +83,7 @@ impl VotingMintConfig {
 
     /// Whether this voting mint is configured.
     pub fn in_use(&self) -> bool {
-        self.lockup_saturation_secs > 0
+        self.mint != Pubkey::default()
     }
 }
 
