@@ -11,7 +11,7 @@ pub struct CreateVoter<'info> {
     pub registrar: AccountLoader<'info, Registrar>,
 
     #[account(
-        init_if_needed,
+        init,
         seeds = [registrar.key().as_ref(), b"voter".as_ref(), voter_authority.key().as_ref()],
         bump = voter_bump,
         payer = payer,
@@ -22,12 +22,12 @@ pub struct CreateVoter<'info> {
     /// The authority controling the voter. Must be the same as the
     /// `governing_token_owner` in the token owner record used with
     /// spl-governance.
-    pub voter_authority: UncheckedAccount<'info>,
+    pub voter_authority: Signer<'info>,
 
     /// The voter weight record is the account that will be shown to spl-governance
     /// to prove how much vote weight the voter has. See update_voter_weight_record.
     #[account(
-        init_if_needed,
+        init,
         seeds = [registrar.key().as_ref(), b"voter-weight-record".as_ref(), voter_authority.key().as_ref()],
         bump = voter_weight_record_bump,
         payer = payer,
@@ -43,15 +43,6 @@ pub struct CreateVoter<'info> {
 
     #[account(address = tx_instructions::ID)]
     pub instructions: UncheckedAccount<'info>,
-}
-
-/// Returns if the anchor discriminator on the account is still unset
-pub fn is_freshly_initialized(account_info: &AccountInfo) -> Result<bool> {
-    let data = account_info.try_borrow_data()?;
-    let mut disc_bytes = [0u8; 8];
-    disc_bytes.copy_from_slice(&data[..8]);
-    let discriminator = u64::from_le_bytes(disc_bytes);
-    Ok(discriminator == 0)
 }
 
 /// Creates a new voter account. There can only be a single voter per
@@ -81,23 +72,17 @@ pub fn create_voter(
     let registrar = &ctx.accounts.registrar.load()?;
     let voter_authority = ctx.accounts.voter_authority.key();
 
-    // Init the voter if is hasn't been already.
-    if is_freshly_initialized(ctx.accounts.voter.as_ref())? {
-        let voter = &mut ctx.accounts.voter.load_init()?;
-        voter.voter_bump = voter_bump;
-        voter.voter_weight_record_bump = voter_weight_record_bump;
-        voter.voter_authority = voter_authority;
-        voter.registrar = ctx.accounts.registrar.key();
+    let voter = &mut ctx.accounts.voter.load_init()?;
+    voter.voter_bump = voter_bump;
+    voter.voter_weight_record_bump = voter_weight_record_bump;
+    voter.voter_authority = voter_authority;
+    voter.registrar = ctx.accounts.registrar.key();
 
-        // Initializing the voter weight record exactly when setting up the voter is fine.
-        // Note that vote_weight_record is not an Anchor account, is_freshly_initialized()
-        // would not work.
-        let voter_weight_record = &mut ctx.accounts.voter_weight_record;
-        voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
-        voter_weight_record.realm = registrar.realm;
-        voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
-        voter_weight_record.governing_token_owner = voter_authority;
-    }
+    let voter_weight_record = &mut ctx.accounts.voter_weight_record;
+    voter_weight_record.account_type = VoterWeightAccountType::VoterWeightRecord;
+    voter_weight_record.realm = registrar.realm;
+    voter_weight_record.governing_token_mint = registrar.realm_governing_token_mint;
+    voter_weight_record.governing_token_owner = voter_authority;
 
     Ok(())
 }

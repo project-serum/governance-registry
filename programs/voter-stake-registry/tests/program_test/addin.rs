@@ -215,9 +215,10 @@ impl AddinCookie {
 
         // clone the secrets
         let signer1 = Keypair::from_base58_string(&payer.to_base58_string());
+        let signer2 = Keypair::from_base58_string(&authority.to_base58_string());
 
         self.solana
-            .process_transaction(&instructions, Some(&[&signer1]))
+            .process_transaction(&instructions, Some(&[&signer1, &signer2]))
             .await
             .unwrap();
 

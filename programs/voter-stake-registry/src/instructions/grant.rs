@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::instructions::create_voter::is_freshly_initialized;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
@@ -75,6 +74,15 @@ impl<'info> Grant<'info> {
         };
         CpiContext::new(program, accounts)
     }
+}
+
+/// Returns if the anchor discriminator on the account is still unset
+pub fn is_freshly_initialized(account_info: &AccountInfo) -> Result<bool> {
+    let data = account_info.try_borrow_data()?;
+    let mut disc_bytes = [0u8; 8];
+    disc_bytes.copy_from_slice(&data[..8]);
+    let discriminator = u64::from_le_bytes(disc_bytes);
+    Ok(discriminator == 0)
 }
 
 /// Gives a grant to a voter.
