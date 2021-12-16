@@ -44,7 +44,7 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
-        associated_token::authority = registrar,
+        associated_token::authority = voter,
         associated_token::mint = destination.mint,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
@@ -61,7 +61,7 @@ impl<'info> Withdraw<'info> {
         let accounts = token::Transfer {
             from: self.vault.to_account_info(),
             to: self.destination.to_account_info(),
-            authority: self.registrar.to_account_info(),
+            authority: self.voter.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }
@@ -73,61 +73,66 @@ impl<'info> Withdraw<'info> {
 /// `deposit_entry_index`: The deposit entry to withdraw from.
 /// `amount` is in units of the native currency being withdrawn.
 pub fn withdraw(ctx: Context<Withdraw>, deposit_entry_index: u8, amount: u64) -> Result<()> {
-    // Load the accounts.
-    let registrar = &ctx.accounts.registrar.load()?;
-    let voter = &mut ctx.accounts.voter.load_mut()?;
+    {
+        // Transfer the tokens to withdraw.
+        let voter = &mut ctx.accounts.voter.load()?;
+        let voter_seeds = voter_seeds!(voter);
+        token::transfer(
+            ctx.accounts.transfer_ctx().with_signer(&[voter_seeds]),
+            amount,
+        )?;
+    }
 
-    // Governance may forbid withdraws, for example when engaged in a vote.
-    let token_owner_record = voter.load_token_owner_record(
-        &ctx.accounts.token_owner_record.to_account_info(),
-        registrar,
-    )?;
-    token_owner_record.assert_can_withdraw_governing_tokens()?;
+    {
+        // Load the accounts.
+        let registrar = &ctx.accounts.registrar.load()?;
+        let voter = &mut ctx.accounts.voter.load_mut()?;
 
-    // Get the deposit being withdrawn from.
-    let curr_ts = registrar.clock_unix_timestamp();
-    let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
-    require!(
-        deposit_entry.amount_withdrawable(curr_ts) >= amount,
-        InsufficientVestedTokens
-    );
+        // Governance may forbid withdraws, for example when engaged in a vote.
+        let token_owner_record = voter.load_token_owner_record(
+            &ctx.accounts.token_owner_record.to_account_info(),
+            registrar,
+        )?;
+        token_owner_record.assert_can_withdraw_governing_tokens()?;
 
-    // Get the exchange rate for the token being withdrawn.
-    let mint_idx = registrar.voting_mint_config_index(ctx.accounts.destination.mint)?;
-    require!(
-        mint_idx == deposit_entry.voting_mint_config_idx as usize,
-        ErrorCode::InvalidMint
-    );
+        // Get the deposit being withdrawn from.
+        let curr_ts = registrar.clock_unix_timestamp();
+        let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
+        require!(
+            deposit_entry.amount_withdrawable(curr_ts) >= amount,
+            InsufficientVestedTokens
+        );
 
-    // Bookkeeping for withdrawn funds.
-    require!(
-        amount <= deposit_entry.amount_deposited_native,
-        InternalProgramError
-    );
-    deposit_entry.amount_deposited_native = deposit_entry
-        .amount_deposited_native
-        .checked_sub(amount)
-        .unwrap();
+        // Get the exchange rate for the token being withdrawn.
+        let mint_idx = registrar.voting_mint_config_index(ctx.accounts.destination.mint)?;
+        require!(
+            mint_idx == deposit_entry.voting_mint_config_idx as usize,
+            ErrorCode::InvalidMint
+        );
 
-    // Transfer the tokens to withdraw.
-    let registrar_seeds = registrar_seeds!(registrar);
-    token::transfer(
-        ctx.accounts.transfer_ctx().with_signer(&[registrar_seeds]),
-        amount,
-    )?;
+        // Bookkeeping for withdrawn funds.
+        require!(
+            amount <= deposit_entry.amount_deposited_native,
+            InternalProgramError
+        );
+        deposit_entry.amount_deposited_native = deposit_entry
+            .amount_deposited_native
+            .checked_sub(amount)
+            .unwrap();
 
-    msg!(
-        "Withdrew amount {} at deposit index {} with lockup kind {:?} and {} seconds left",
-        amount,
-        deposit_entry_index,
-        deposit_entry.lockup.kind,
-        deposit_entry.lockup.seconds_left(curr_ts),
-    );
+        msg!(
+            "Withdrew amount {} at deposit index {} with lockup kind {:?} and {} seconds left",
+            amount,
+            deposit_entry_index,
+            deposit_entry.lockup.kind,
+            deposit_entry.lockup.seconds_left(curr_ts),
+        );
 
-    // Update the voter weight record
-    let record = &mut ctx.accounts.voter_weight_record;
-    record.voter_weight = voter.weight(&registrar)?;
-    record.voter_weight_expiry = Some(Clock::get()?.slot);
+        // Update the voter weight record
+        let record = &mut ctx.accounts.voter_weight_record;
+        record.voter_weight = voter.weight(&registrar)?;
+        record.voter_weight_expiry = Some(Clock::get()?.slot);
+    }
 
     Ok(())
 }
