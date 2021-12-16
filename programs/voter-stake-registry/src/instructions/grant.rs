@@ -3,6 +3,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount};
 use spl_governance::addins::voter_weight::VoterWeightAccountType;
+use std::convert::TryFrom;
 use std::mem::size_of;
 
 #[derive(Accounts)]
@@ -94,6 +95,7 @@ pub fn grant(
     voter_bump: u8,
     voter_weight_record_bump: u8,
     kind: LockupKind,
+    start_ts: Option<u64>,
     periods: u32,
     allow_clawback: bool,
     amount: u64,
@@ -143,12 +145,18 @@ pub fn grant(
         .ok_or(ErrorCode::DepositEntryFull)?;
     let d_entry = &mut voter.deposits[free_entry_idx];
 
+    let start_ts = if let Some(v) = start_ts {
+        i64::try_from(v).unwrap()
+    } else {
+        registrar.clock_unix_timestamp()
+    };
+
     // Set up a deposit.
     *d_entry = DepositEntry::default();
     d_entry.is_used = true;
     d_entry.voting_mint_config_idx = mint_idx as u8;
     d_entry.allow_clawback = allow_clawback;
-    d_entry.lockup = Lockup::new_from_periods(kind, registrar.clock_unix_timestamp(), periods)?;
+    d_entry.lockup = Lockup::new_from_periods(kind, start_ts, periods)?;
 
     // Deposit tokens, locking them all.
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;

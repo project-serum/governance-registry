@@ -245,6 +245,7 @@ impl AddinCookie {
             &voter_stake_registry::instruction::CreateDepositEntry {
                 deposit_entry_index,
                 kind: lockup_kind,
+                start_ts: None,
                 periods,
                 allow_clawback,
             },
@@ -351,6 +352,7 @@ impl AddinCookie {
             voter_bump,
             voter_weight_record_bump,
             kind: lockup_kind,
+            start_ts: None,
             periods,
             allow_clawback,
             amount,
