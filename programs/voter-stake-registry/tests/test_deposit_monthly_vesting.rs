@@ -134,6 +134,7 @@ async fn test_deposit_monthly_vesting() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Monthly,
+            None,
             3,
             false,
         )

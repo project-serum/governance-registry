@@ -134,6 +134,7 @@ async fn test_deposit_constant() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Constant,
+            None,
             2, // days
             false,
         )

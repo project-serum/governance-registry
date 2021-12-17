@@ -134,6 +134,7 @@ async fn test_deposit_cliff() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Cliff,
+            None,
             3, // days
             false,
         )

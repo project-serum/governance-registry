@@ -89,6 +89,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Daily,
+            None,
             10,
             true,
         )

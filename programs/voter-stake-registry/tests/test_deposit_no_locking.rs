@@ -143,6 +143,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             LockupKind::None,
+            None,
             0,
             false,
         )
@@ -174,6 +175,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_voting_mint,
             1,
             LockupKind::None,
+            None,
             0,
             false,
         )
@@ -246,6 +248,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_voting_mint,
             5,
             LockupKind::None,
+            None,
             0,
             false,
         )
@@ -286,6 +289,7 @@ async fn test_deposit_no_locking() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             LockupKind::None,
+            None,
             0,
             false,
         )

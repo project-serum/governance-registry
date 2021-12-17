@@ -66,6 +66,7 @@ async fn test_grants() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             LockupKind::None,
+            None,
             0,
             false,
         )
@@ -79,6 +80,7 @@ async fn test_grants() -> Result<(), TransportError> {
             voter_authority.pubkey(),
             &mngo_voting_mint,
             LockupKind::Monthly,
+            None,
             12,
             true,
             12000,
@@ -95,6 +97,7 @@ async fn test_grants() -> Result<(), TransportError> {
             voter2_authority.pubkey(),
             &mngo_voting_mint,
             LockupKind::Monthly,
+            None,
             12,
             true,
             24000,
@@ -126,6 +129,41 @@ async fn test_grants() -> Result<(), TransportError> {
     assert_eq!(deposit.allow_clawback, true);
     assert_eq!(deposit.lockup.kind, LockupKind::Monthly);
     assert_eq!(deposit.lockup.periods_total().unwrap(), 12);
+
+    // grant funds with a start time in the past
+    context.solana.advance_clock_by_slots(2).await;
+    let now = context.solana.get_clock().await.unix_timestamp as u64;
+    let start = now - LockupKind::Monthly.period_secs() * 2 - 60;
+    addin
+        .grant(
+            &registrar,
+            voter_authority.pubkey(),
+            &mngo_voting_mint,
+            LockupKind::Monthly,
+            Some(start),
+            12,
+            true,
+            12000,
+            grant_funds,
+            &grant_authority,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(voter.deposit_amount(&context.solana, 2).await, 12000);
+    let voter_data = context
+        .solana
+        .get_account::<voter_stake_registry::state::Voter>(voter.address)
+        .await;
+    let deposit = &voter_data.deposits[2];
+    assert_eq!(deposit.is_used, true);
+    assert_eq!(deposit.amount_deposited_native, 12000);
+    assert_eq!(deposit.amount_initially_locked_native, 12000);
+    assert_eq!(deposit.allow_clawback, true);
+    assert_eq!(deposit.lockup.kind, LockupKind::Monthly);
+    assert_eq!(deposit.lockup.periods_total().unwrap(), 12);
+    assert_eq!(deposit.lockup.periods_left(now as i64).unwrap(), 10);
+    assert_eq!(deposit.amount_withdrawable(now as i64), 2000);
 
     Ok(())
 }

@@ -62,6 +62,7 @@ async fn test_all_deposits() -> Result<(), TransportError> {
                 &mngo_voting_mint,
                 i,
                 LockupKind::Monthly,
+                None,
                 12,
                 false,
             )

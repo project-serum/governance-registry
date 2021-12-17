@@ -53,6 +53,14 @@ impl<'info> Deposit<'info> {
 ///
 /// `deposit_entry_index`: Index of the deposit entry.
 /// `amount`: Number of native tokens to transfer.
+///
+/// Note that adding tokens to a deposit entry with vesting, where some vesting
+/// periods are already in the past is supported. What happens is that the tokens
+/// get distributed over vesting points in the future.
+///
+/// Example: 20 tokens are deposited to a three-day vesting deposit entry
+/// that started 36 hours ago. That means 10 extra tokens will vest in 12 hours
+/// and another 10 in 36 hours.
 pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> Result<()> {
     if amount == 0 {
         return Ok(());

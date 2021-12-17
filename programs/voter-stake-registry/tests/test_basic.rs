@@ -94,6 +94,7 @@ async fn test_basic() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             voter_stake_registry::state::LockupKind::Cliff,
+            None,
             0,
             false,
         )

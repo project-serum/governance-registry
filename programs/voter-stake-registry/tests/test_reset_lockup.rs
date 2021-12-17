@@ -124,6 +124,7 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
             &mngo_voting_mint,
             7,
             LockupKind::Daily,
+            None,
             3,
             false,
         )
@@ -212,6 +213,7 @@ async fn test_reset_lockup() -> Result<(), TransportError> {
             &mngo_voting_mint,
             5,
             LockupKind::Cliff,
+            None,
             3,
             false,
         )

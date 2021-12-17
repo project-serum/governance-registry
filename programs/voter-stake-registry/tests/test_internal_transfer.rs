@@ -115,6 +115,7 @@ async fn test_internal_transfer() -> Result<(), TransportError> {
             &mngo_voting_mint,
             0,
             LockupKind::Monthly,
+            None,
             3,
             false,
         )
@@ -131,6 +132,7 @@ async fn test_internal_transfer() -> Result<(), TransportError> {
             &mngo_voting_mint,
             1,
             LockupKind::Daily,
+            None,
             3,
             false,
         )
@@ -172,6 +174,7 @@ async fn test_internal_transfer() -> Result<(), TransportError> {
             &mngo_voting_mint,
             2,
             LockupKind::Constant,
+            None,
             5,
             false,
         )
@@ -186,6 +189,7 @@ async fn test_internal_transfer() -> Result<(), TransportError> {
             &mngo_voting_mint,
             3,
             LockupKind::Cliff,
+            None,
             5,
             false,
         )
@@ -214,6 +218,7 @@ async fn test_internal_transfer() -> Result<(), TransportError> {
             &mngo_voting_mint,
             4,
             LockupKind::Cliff,
+            None,
             8,
             false,
         )

@@ -12,6 +12,7 @@ use std::mem::size_of;
     voter_bump: u8,
     voter_weight_record_bump: u8,
     kind: LockupKind,
+    start_ts: Option<u64>,
     periods: u32,
     allow_clawback: bool,
     amount: u64,

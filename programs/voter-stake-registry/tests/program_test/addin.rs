@@ -224,6 +224,7 @@ impl AddinCookie {
         voting_mint: &VotingMintConfigCookie,
         deposit_entry_index: u8,
         lockup_kind: voter_stake_registry::state::LockupKind,
+        start_ts: Option<u64>,
         periods: u32,
         allow_clawback: bool,
     ) -> std::result::Result<(), TransportError> {
@@ -233,7 +234,7 @@ impl AddinCookie {
             &voter_stake_registry::instruction::CreateDepositEntry {
                 deposit_entry_index,
                 kind: lockup_kind,
-                start_ts: None,
+                start_ts,
                 periods,
                 allow_clawback,
             },
@@ -321,6 +322,7 @@ impl AddinCookie {
         voter_authority: Pubkey,
         voting_mint: &VotingMintConfigCookie,
         lockup_kind: voter_stake_registry::state::LockupKind,
+        start_ts: Option<u64>,
         periods: u32,
         allow_clawback: bool,
         amount: u64,
@@ -355,7 +357,7 @@ impl AddinCookie {
             voter_bump,
             voter_weight_record_bump,
             kind: lockup_kind,
-            start_ts: None,
+            start_ts,
             periods,
             allow_clawback,
             amount,
