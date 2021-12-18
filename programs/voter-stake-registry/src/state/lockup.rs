@@ -9,15 +9,9 @@ use std::convert::TryFrom;
 vote_weight_record!(crate::ID);
 
 /// Seconds in one day.
-#[cfg(feature = "localnet")]
-pub const SECS_PER_DAY: u64 = 10;
-#[cfg(not(feature = "localnet"))]
 pub const SECS_PER_DAY: u64 = 86_400;
 
 /// Seconds in one month.
-#[cfg(feature = "localnet")]
-pub const SECS_PER_MONTH: u64 = 10;
-#[cfg(not(feature = "localnet"))]
 pub const SECS_PER_MONTH: u64 = 365 * SECS_PER_DAY / 12;
 
 #[zero_copy]
