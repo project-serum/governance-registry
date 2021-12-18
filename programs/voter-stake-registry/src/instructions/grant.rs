@@ -59,6 +59,7 @@ pub struct Grant<'info> {
     )]
     pub deposit_token: Box<Account<'info, TokenAccount>>,
 
+    // Verification inline in instruction
     pub authority: Signer<'info>,
 
     #[account(mut)]
