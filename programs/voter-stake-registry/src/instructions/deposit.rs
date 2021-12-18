@@ -89,7 +89,7 @@ pub fn deposit(ctx: Context<Deposit>, deposit_entry_index: u8, amount: u64) -> R
     let curr_ts = registrar.clock_unix_timestamp();
     d_entry.resolve_vesting(curr_ts)?;
 
-    // Deposit tokens into the registrar and increase the lockup amount too.
+    // Deposit tokens into the vault and increase the lockup amount too.
     token::transfer(ctx.accounts.transfer_ctx(), amount)?;
     d_entry.amount_deposited_native = d_entry.amount_deposited_native.checked_add(amount).unwrap();
     d_entry.amount_initially_locked_native = d_entry
