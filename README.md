@@ -42,6 +42,14 @@ Users will likely want to compile their own voter-stake-registry and deploy it t
 Before compiling, look at:
 - `Registrar::voting_mints`: The length of this array defines the number of configurable voting mints. Adjust as needed.
 
+## Devnet
+
+For testing purposes, an instance of voter-stake-registry is deployed on devnet:
+```
+voter-stake-registry:  4Q6WW2ouZ6V3iaNm56MTd5n2tnTm4C5fiH8miFHnAFHo
+spl-governance master: i7BqPFNUvB7yqwVeCRJHrtZVwRsZZNUJTdBm7Vg2cDb
+```
+
 # Usage Scenarios
 
 ## Setup
