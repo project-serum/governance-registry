@@ -33,10 +33,6 @@ pub struct CreateRegistrar<'info> {
     pub realm_governing_token_mint: Account<'info, Mint>,
     pub realm_authority: Signer<'info>,
 
-    /// The authority that may use the clawback() instruction
-    // TODO: Just use the realm_authority?
-    pub clawback_authority: UncheckedAccount<'info>,
-
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -58,7 +54,6 @@ pub fn create_registrar(ctx: Context<CreateRegistrar>, registrar_bump: u8) -> Re
     registrar.realm = ctx.accounts.realm.key();
     registrar.realm_governing_token_mint = ctx.accounts.realm_governing_token_mint.key();
     registrar.realm_authority = ctx.accounts.realm_authority.key();
-    registrar.clawback_authority = ctx.accounts.clawback_authority.key();
     registrar.time_offset = 0;
 
     // Verify that "realm_authority" is the expected authority on "realm"

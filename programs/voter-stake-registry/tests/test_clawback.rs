@@ -167,7 +167,7 @@ async fn test_clawback() -> Result<(), TransportError> {
             0,
         )
         .await
-        .expect_err("fails because clawback_authority is invalid");
+        .expect_err("fails because realm_authority is invalid");
 
     println!("clawback");
     context
