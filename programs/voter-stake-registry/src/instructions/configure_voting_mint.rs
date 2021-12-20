@@ -102,7 +102,7 @@ pub fn configure_voting_mint(
         deposit_scaled_factor,
         lockup_scaled_factor,
         lockup_saturation_secs,
-        grant_authority: grant_authority.unwrap_or(Pubkey::default()),
+        grant_authority: grant_authority.unwrap_or_default(),
         padding: [0; 31],
     };
 
