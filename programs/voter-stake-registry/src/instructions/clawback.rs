@@ -6,9 +6,9 @@ use anchor_spl::token::{Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct Clawback<'info> {
-    #[account(has_one = clawback_authority)]
+    #[account(has_one = realm_authority)]
     pub registrar: AccountLoader<'info, Registrar>,
-    pub clawback_authority: Signer<'info>,
+    pub realm_authority: Signer<'info>,
 
     // checking the PDA address it just an extra precaution,
     // the other constraints must be exhaustive

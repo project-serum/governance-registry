@@ -54,7 +54,7 @@ pub struct CreateDepositEntry<'info> {
 ///    the vesting start time and the anchor for the periods computation.
 ///
 /// - `periods`: How long to lock up, depending on `kind`. See LockupKind::period_secs()
-/// - `allow_clawback`: When enabled, the the clawback_authority is allowed to
+/// - `allow_clawback`: When enabled, the the realm_authority is allowed to
 ///    unilaterally claim locked tokens.
 pub fn create_deposit_entry(
     ctx: Context<CreateDepositEntry>,

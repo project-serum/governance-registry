@@ -60,7 +60,6 @@ impl AddinCookie {
                 registrar,
                 governance_program_id: realm.governance.program_id,
                 realm: realm.realm,
-                clawback_authority: realm.authority,
                 realm_governing_token_mint: community_token_mint,
                 realm_authority: realm.authority,
                 payer: payer.pubkey(),
@@ -404,7 +403,7 @@ impl AddinCookie {
         registrar: &RegistrarCookie,
         voter: &VoterCookie,
         voting_mint: &VotingMintConfigCookie,
-        clawback_authority: &Keypair,
+        realm_authority: &Keypair,
         token_address: Pubkey,
         deposit_entry_index: u8,
     ) -> std::result::Result<(), TransportError> {
@@ -422,7 +421,7 @@ impl AddinCookie {
                 token_owner_record: voter.token_owner_record,
                 vault,
                 destination: token_address,
-                clawback_authority: clawback_authority.pubkey(),
+                realm_authority: realm_authority.pubkey(),
                 token_program: spl_token::id(),
             },
             None,
@@ -435,7 +434,7 @@ impl AddinCookie {
         }];
 
         // clone the secrets
-        let signer = Keypair::from_base58_string(&clawback_authority.to_base58_string());
+        let signer = Keypair::from_base58_string(&realm_authority.to_base58_string());
 
         self.solana
             .process_transaction(&instructions, Some(&[&signer]))
