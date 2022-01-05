@@ -20,7 +20,7 @@ stale = false # Allow stale advisory DB (i.e. no commits for 90 days, default: f
 deny = [] # exit on error if unmaintained dependencies are found
 format = "terminal" # "terminal" (human readable report) or "json"
 quiet = false # Only print information on error
-show_tree = false # Show inverse dependency trees along with advisories (default: true)
+show_tree = true # Show inverse dependency trees along with advisories (default: true)
 
 # Target Configuration
 [target]
