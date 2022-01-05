@@ -1,4 +1,4 @@
-name: Lint, test & scan
+name: Lint and Test
 on:
   push:
     branches: [master, v*.*]
@@ -16,7 +16,7 @@ defaults:
 
 jobs:
   lint:
-    name: Install and run linters
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +38,7 @@ jobs:
         run: cargo clippy -- --deny=warnings --allow=clippy::style --allow=clippy::complexity
 
   tests:
-    name: Install and run tests
+    name: Test and Soteria
     runs-on: ubuntu-latest
 
     steps:
@@ -72,7 +72,7 @@ jobs:
       - name: Run bpf tests
         run: cargo test-bpf
 
-        # Create a cache for Soteria
+      # Create a cache for Soteria
       - name: Cache Soteria
         id: cache-soteria
         uses: actions/cache@v2
@@ -80,7 +80,7 @@ jobs:
           path: ~/.cache/soteria
           key: ${{ runner.os }}-soteria
           
-        # Install Soteria  
+      # Install Soteria
       - name: Install Soteria
         run: |
           echo "Downloading Soteria..."
