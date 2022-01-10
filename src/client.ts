@@ -1,6 +1,6 @@
 import { Program, Provider } from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { VoterStakeRegistry } from './idl';
+import { VoterStakeRegistry } from './types';
 
 export const VSR_ID = new PublicKey(
   '4Q6WW2ouZ6V3iaNm56MTd5n2tnTm4C5fiH8miFHnAFHo',
