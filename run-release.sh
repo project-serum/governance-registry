@@ -12,15 +12,19 @@ if [[ -z "${VERSION_MANUALLY_BUMPED}" ]]; then
   exit -1
 fi
 
+# build program
 anchor build
 
+# update on chain program and IDL, atm used for testing/developing
 anchor deploy --provider.cluster devnet --provider.wallet ${PROVIDER_WALLET}
 anchor idl upgrade --provider.cluster devnet --provider.wallet ${PROVIDER_WALLET}\
  --filepath target/idl/voter_stake_registry.json 4Q6WW2ouZ6V3iaNm56MTd5n2tnTm4C5fiH8miFHnAFHo
 
+# update types in npm package and publish the npm package
 cp ./target/types/voter_stake_registry.ts src/voter_stake_registry.ts
 yarn clean && yarn build && cp package.json ./dist/ && yarn publish dist
 
+# commit changes
 git add src/voter_stake_registry.ts
 git commit -m "updated types"
 git push
