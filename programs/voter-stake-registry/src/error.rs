@@ -70,4 +70,6 @@ pub enum ErrorCode {
     InvalidLockupKind,
     #[msg("")]
     InvalidChangeToClawbackDepositEntry,
+    #[msg("")]
+    SerializationError,
 }
