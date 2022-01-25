@@ -1,8 +1,10 @@
 use anchor_spl::token::TokenAccount;
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError};
+use std::borrow::BorrowMut;
 
 use program_test::*;
+use voter_stake_registry::state::Voter;
 
 mod program_test;
 
@@ -162,6 +164,32 @@ async fn test_basic() -> Result<(), TransportError> {
     assert_eq!(vault_after_withdraw, 0);
     let balance_after_withdraw = voter.deposit_amount(&context.solana, 0).await;
     assert_eq!(balance_after_withdraw, 0);
+
+    let lamports_before = context
+        .solana
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_balance(voter_authority.pubkey())
+        .await?;
+    context
+        .addin
+        .close_voter(&registrar, &voter, &mngo_voting_mint, &voter_authority)
+        .await?;
+    let lamports_after = context
+        .solana
+        .context
+        .borrow_mut()
+        .banks_client
+        .get_balance(voter_authority.pubkey())
+        .await?;
+    let token_rent = context.solana.rent.minimum_balance(TokenAccount::LEN);
+    let voter_rent = context
+        .solana
+        .rent
+        .minimum_balance(std::mem::size_of::<Voter>());
+    let tolerance = 60_000;
+    assert!(lamports_after > lamports_before + voter_rent + token_rent - tolerance);
 
     Ok(())
 }
