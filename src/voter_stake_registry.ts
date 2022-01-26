@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -82,7 +82,7 @@ export type VoterStakeRegistry = {
           "type": "i8"
         },
         {
-          "name": "depositScaledFactor",
+          "name": "unlockedScaledFactor",
           "type": "u64"
         },
         {
@@ -545,7 +545,41 @@ export type VoterStakeRegistry = {
       ]
     },
     {
-      "name": "internalTransfer",
+      "name": "internalTransferLocked",
+      "accounts": [
+        {
+          "name": "registrar",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "voter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "voterAuthority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "sourceDepositEntryIndex",
+          "type": "u8"
+        },
+        {
+          "name": "targetDepositEntryIndex",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "internalTransferUnlocked",
       "accounts": [
         {
           "name": "registrar",
@@ -624,6 +658,11 @@ export type VoterStakeRegistry = {
       "name": "closeVoter",
       "accounts": [
         {
+          "name": "registrar",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "voter",
           "isMut": true,
           "isSigner": false
@@ -635,6 +674,11 @@ export type VoterStakeRegistry = {
         },
         {
           "name": "solDestination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -922,7 +966,7 @@ export type VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "depositScaledFactor",
+            "name": "unlockedScaledFactor",
             "type": "u64"
           },
           {
@@ -983,7 +1027,7 @@ export type VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerDepositOnly",
+          "name": "votingPowerUnlockedOnly",
           "type": "u64",
           "index": false
         }
@@ -1003,7 +1047,7 @@ export type VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "withdrawable",
+          "name": "unlocked",
           "type": "u64",
           "index": false
         },
@@ -1013,7 +1057,7 @@ export type VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerDepositOnly",
+          "name": "votingPowerUnlockedOnly",
           "type": "u64",
           "index": false
         },
@@ -1198,13 +1242,28 @@ export type VoterStakeRegistry = {
     {
       "code": 6033,
       "name": "InvalidChangeToClawbackDepositEntry",
+      "msg": ""
+    },
+    {
+      "code": 6034,
+      "name": "InternalErrorBadLockupVoteWeight",
+      "msg": ""
+    },
+    {
+      "code": 6035,
+      "name": "DepositStartTooFarInFuture",
+      "msg": ""
+    },
+    {
+      "code": 6036,
+      "name": "VaultTokenNonZero",
       "msg": ""
     }
   ]
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1287,7 +1346,7 @@ export const IDL: VoterStakeRegistry = {
           "type": "i8"
         },
         {
-          "name": "depositScaledFactor",
+          "name": "unlockedScaledFactor",
           "type": "u64"
         },
         {
@@ -1750,7 +1809,41 @@ export const IDL: VoterStakeRegistry = {
       ]
     },
     {
-      "name": "internalTransfer",
+      "name": "internalTransferLocked",
+      "accounts": [
+        {
+          "name": "registrar",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "voter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "voterAuthority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "sourceDepositEntryIndex",
+          "type": "u8"
+        },
+        {
+          "name": "targetDepositEntryIndex",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "internalTransferUnlocked",
       "accounts": [
         {
           "name": "registrar",
@@ -1829,6 +1922,11 @@ export const IDL: VoterStakeRegistry = {
       "name": "closeVoter",
       "accounts": [
         {
+          "name": "registrar",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "voter",
           "isMut": true,
           "isSigner": false
@@ -1840,6 +1938,11 @@ export const IDL: VoterStakeRegistry = {
         },
         {
           "name": "solDestination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -2127,7 +2230,7 @@ export const IDL: VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "depositScaledFactor",
+            "name": "unlockedScaledFactor",
             "type": "u64"
           },
           {
@@ -2188,7 +2291,7 @@ export const IDL: VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerDepositOnly",
+          "name": "votingPowerUnlockedOnly",
           "type": "u64",
           "index": false
         }
@@ -2208,7 +2311,7 @@ export const IDL: VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "withdrawable",
+          "name": "unlocked",
           "type": "u64",
           "index": false
         },
@@ -2218,7 +2321,7 @@ export const IDL: VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerDepositOnly",
+          "name": "votingPowerUnlockedOnly",
           "type": "u64",
           "index": false
         },
@@ -2403,6 +2506,21 @@ export const IDL: VoterStakeRegistry = {
     {
       "code": 6033,
       "name": "InvalidChangeToClawbackDepositEntry",
+      "msg": ""
+    },
+    {
+      "code": 6034,
+      "name": "InternalErrorBadLockupVoteWeight",
+      "msg": ""
+    },
+    {
+      "code": 6035,
+      "name": "DepositStartTooFarInFuture",
+      "msg": ""
+    },
+    {
+      "code": 6036,
+      "name": "VaultTokenNonZero",
       "msg": ""
     }
   ]
