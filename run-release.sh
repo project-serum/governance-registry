@@ -24,7 +24,7 @@ anchor idl upgrade --provider.cluster devnet --provider.wallet ${PROVIDER_WALLET
 cp ./target/types/voter_stake_registry.ts src/voter_stake_registry.ts
 yarn clean && yarn build && cp package.json ./dist/ && yarn publish dist
 
-# commit changes
-git add src/voter_stake_registry.ts
-git commit -m "updated types"
-git push
+echo
+echo Remember to commit and push the version update as well as the changes
+echo to src/voter_stake_registry.ts .
+echo
