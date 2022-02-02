@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1263,7 +1263,7 @@ export type VoterStakeRegistry = {
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "voter_stake_registry",
   "instructions": [
     {
