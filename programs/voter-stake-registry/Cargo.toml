@@ -35,13 +35,13 @@ spl-governance = { git = "https://github.com/solana-labs/solana-program-library"
 spl-governance-addin-api = { git = "https://github.com/solana-labs/solana-program-library", rev = "4c0bc4c968d5d6feaee18b1c633c636f20d66b15" }
 
 # refer solana to the same version anchor-lang 0.20.1 refers to
-solana-program = "1.8.5"
+solana-program = "1.9.5"
 static_assertions = "1.1"
 
 [dev-dependencies]
-solana-sdk = "1.8.5"
-solana-program-test = "1.8.5"
-solana-logger = "1.8.5"
+solana-sdk = "1.9.5"
+solana-program-test = "1.9.5"
+solana-logger = "1.9.5"
 spl-token = { version = "^3.0.0", features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "^1.0.3", features = ["no-entrypoint"] }
 bytemuck = "^1.7.2"
