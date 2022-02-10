@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.1.8",
+  "version": "0.1.10",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -462,11 +462,6 @@ export type VoterStakeRegistry = {
         {
           "name": "voter",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenOwnerRecord",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1268,7 +1263,7 @@ export type VoterStakeRegistry = {
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.1.8",
+  "version": "0.1.10",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1731,11 +1726,6 @@ export const IDL: VoterStakeRegistry = {
         {
           "name": "voter",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenOwnerRecord",
-          "isMut": false,
           "isSigner": false
         },
         {
