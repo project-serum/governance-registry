@@ -68,6 +68,16 @@ pub fn clawback(ctx: Context<Clawback>, deposit_entry_index: u8) -> Result<()> {
         // Load the accounts.
         let registrar = &ctx.accounts.registrar.load()?;
         let voter = &mut ctx.accounts.voter.load_mut()?;
+
+        // Governance may forbid clawback which is a form of withdraw, for example when engaged
+        // in a vote.
+        let token_owner_record = voter.load_token_owner_record(
+            &ctx.accounts.token_owner_record.to_account_info(),
+            registrar,
+        )?;
+        token_owner_record.assert_can_withdraw_governing_tokens()?;
+
+        // Get the deposit being clawed back from.
         let deposit_entry = voter.active_deposit_mut(deposit_entry_index)?;
         require!(
             deposit_entry.allow_clawback,
