@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -702,6 +702,10 @@ export type VoterStakeRegistry = {
       "args": [
         {
           "name": "depositEntryBegin",
+          "type": "u8"
+        },
+        {
+          "name": "depositEntryCount",
           "type": "u8"
         }
       ]
@@ -1263,7 +1267,7 @@ export type VoterStakeRegistry = {
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1966,6 +1970,10 @@ export const IDL: VoterStakeRegistry = {
       "args": [
         {
           "name": "depositEntryBegin",
+          "type": "u8"
+        },
+        {
+          "name": "depositEntryCount",
           "type": "u8"
         }
       ]
