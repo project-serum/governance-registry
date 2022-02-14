@@ -2,6 +2,7 @@ name: Soteria Scan
 
 on:
   push:
+    branches: master
   pull_request:
 
 env:
