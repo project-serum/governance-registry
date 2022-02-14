@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.1.11",
+  "version": "0.2.0",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -82,11 +82,11 @@ export type VoterStakeRegistry = {
           "type": "i8"
         },
         {
-          "name": "unlockedScaledFactor",
+          "name": "baselineVoteWeightScaledFactor",
           "type": "u64"
         },
         {
-          "name": "lockupScaledFactor",
+          "name": "maxExtraLockupVoteWeightScaledFactor",
           "type": "u64"
         },
         {
@@ -755,7 +755,7 @@ export type VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "padding1",
+            "name": "reserved1",
             "type": {
               "array": [
                 "u8",
@@ -783,11 +783,20 @@ export type VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding2",
+            "name": "reserved2",
             "type": {
               "array": [
                 "u8",
-                31
+                7
+              ]
+            }
+          },
+          {
+            "name": "reserved3",
+            "type": {
+              "array": [
+                "u64",
+                11
               ]
             }
           }
@@ -827,11 +836,11 @@ export type VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                30
+                94
               ]
             }
           }
@@ -872,11 +881,11 @@ export type VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                13
+                29
               ]
             }
           }
@@ -945,7 +954,7 @@ export type VoterStakeRegistry = {
             }
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
@@ -970,11 +979,11 @@ export type VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "unlockedScaledFactor",
+            "name": "baselineVoteWeightScaledFactor",
             "type": "u64"
           },
           {
-            "name": "lockupScaledFactor",
+            "name": "maxExtraLockupVoteWeightScaledFactor",
             "type": "u64"
           },
           {
@@ -986,11 +995,20 @@ export type VoterStakeRegistry = {
             "type": "i8"
           },
           {
-            "name": "padding",
+            "name": "reserved1",
             "type": {
               "array": [
                 "u8",
-                31
+                7
+              ]
+            }
+          },
+          {
+            "name": "reserved2",
+            "type": {
+              "array": [
+                "u64",
+                7
               ]
             }
           }
@@ -1031,7 +1049,7 @@ export type VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerUnlockedOnly",
+          "name": "votingPowerBaseline",
           "type": "u64",
           "index": false
         }
@@ -1061,7 +1079,7 @@ export type VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerUnlockedOnly",
+          "name": "votingPowerBaseline",
           "type": "u64",
           "index": false
         },
@@ -1267,7 +1285,7 @@ export type VoterStakeRegistry = {
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.1.11",
+  "version": "0.2.0",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1350,11 +1368,11 @@ export const IDL: VoterStakeRegistry = {
           "type": "i8"
         },
         {
-          "name": "unlockedScaledFactor",
+          "name": "baselineVoteWeightScaledFactor",
           "type": "u64"
         },
         {
-          "name": "lockupScaledFactor",
+          "name": "maxExtraLockupVoteWeightScaledFactor",
           "type": "u64"
         },
         {
@@ -2023,7 +2041,7 @@ export const IDL: VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "padding1",
+            "name": "reserved1",
             "type": {
               "array": [
                 "u8",
@@ -2051,11 +2069,20 @@ export const IDL: VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding2",
+            "name": "reserved2",
             "type": {
               "array": [
                 "u8",
-                31
+                7
+              ]
+            }
+          },
+          {
+            "name": "reserved3",
+            "type": {
+              "array": [
+                "u64",
+                11
               ]
             }
           }
@@ -2095,11 +2122,11 @@ export const IDL: VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                30
+                94
               ]
             }
           }
@@ -2140,11 +2167,11 @@ export const IDL: VoterStakeRegistry = {
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                13
+                29
               ]
             }
           }
@@ -2213,7 +2240,7 @@ export const IDL: VoterStakeRegistry = {
             }
           },
           {
-            "name": "padding",
+            "name": "reserved",
             "type": {
               "array": [
                 "u8",
@@ -2238,11 +2265,11 @@ export const IDL: VoterStakeRegistry = {
             "type": "publicKey"
           },
           {
-            "name": "unlockedScaledFactor",
+            "name": "baselineVoteWeightScaledFactor",
             "type": "u64"
           },
           {
-            "name": "lockupScaledFactor",
+            "name": "maxExtraLockupVoteWeightScaledFactor",
             "type": "u64"
           },
           {
@@ -2254,11 +2281,20 @@ export const IDL: VoterStakeRegistry = {
             "type": "i8"
           },
           {
-            "name": "padding",
+            "name": "reserved1",
             "type": {
               "array": [
                 "u8",
-                31
+                7
+              ]
+            }
+          },
+          {
+            "name": "reserved2",
+            "type": {
+              "array": [
+                "u64",
+                7
               ]
             }
           }
@@ -2299,7 +2335,7 @@ export const IDL: VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerUnlockedOnly",
+          "name": "votingPowerBaseline",
           "type": "u64",
           "index": false
         }
@@ -2329,7 +2365,7 @@ export const IDL: VoterStakeRegistry = {
           "index": false
         },
         {
-          "name": "votingPowerUnlockedOnly",
+          "name": "votingPowerBaseline",
           "type": "u64",
           "index": false
         },
