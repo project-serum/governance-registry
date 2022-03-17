@@ -18,34 +18,12 @@ fn deserialize_event<T: anchor_lang::Event>(event: &str) -> Option<T> {
 #[tokio::test]
 async fn test_print_event() -> Result<(), TransportError> {
     println!(
-        "{:?}",
+        "{:#?}",
         deserialize_event::<voter_stake_registry::events::DepositEntryInfo>(
             "LP4gbyknBZQAABhzAQAAAAAAGHMBAAAAAAAYcwEAAAAAAAEAAAAAAAAAAAGK6hx3fgEAAAA="
         )
         .ok_or(())
     );
-    println!(
-        "{:?}",
-        deserialize_event::<voter_stake_registry::events::DepositEntryInfo>(
-            "LP4gbyknBZQBAAAAAAAAAAAAoIYBAAAAAABQwwAAAAAAAAFQwwAAAAAAAAFSl5iAfgEAAAA="
-        )
-        .ok_or(())
-    );
-    println!(
-        "{:?}",
-        deserialize_event::<voter_stake_registry::events::DepositEntryInfo>(
-            "LP4gbyknBZQCAAAAAAAAAAAARjI0BgAAAAAQJwAAAAAAAAEQJwAAAAAAAAGLPXx3fgEAAAEQJwAAAAAAAIs9fHd+AQAA"
-        )
-        .ok_or(())
-    );
-    println!(
-        "{:?}",
-        deserialize_event::<voter_stake_registry::events::DepositEntryInfo>(
-            "LP4gbyknBZQDAAAAAAAAAAAACFIAAAAAAACYOgAAAAAAAAGYOgAAAAAAAAAA"
-        )
-        .ok_or(())
-    );
-
     Ok(())
 }
 
