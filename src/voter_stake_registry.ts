@@ -1,5 +1,5 @@
 export type VoterStakeRegistry = {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -1279,13 +1279,18 @@ export type VoterStakeRegistry = {
     {
       "code": 6036,
       "name": "VaultTokenNonZero",
+      "msg": ""
+    },
+    {
+      "code": 6037,
+      "name": "InvalidTimestampArguments",
       "msg": ""
     }
   ]
 };
 
 export const IDL: VoterStakeRegistry = {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "name": "voter_stake_registry",
   "instructions": [
     {
@@ -2565,6 +2570,11 @@ export const IDL: VoterStakeRegistry = {
     {
       "code": 6036,
       "name": "VaultTokenNonZero",
+      "msg": ""
+    },
+    {
+      "code": 6037,
+      "name": "InvalidTimestampArguments",
       "msg": ""
     }
   ]
